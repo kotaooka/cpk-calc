@@ -1,6 +1,6 @@
 // 工程能力解析の Service Worker
 // 公開ファイルを更新したら VERSION を上げる。古いキャッシュは activate 時に削除される
-const VERSION = 'v1.1.1';
+const VERSION = 'v1.2.0';
 const APP_CACHE = `cpk-calc-${VERSION}`;
 const FONT_CACHE = 'cpk-calc-fonts';
 
@@ -10,6 +10,8 @@ const ASSETS = [
   './index.html',
   './js/app.js',
   './js/stats.js',
+  './js/spec.js',
+  './js/grid.js',
   './js/xlsx.js',
   './js/charts.js',
   './samples/sample.xlsx',

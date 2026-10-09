@@ -406,6 +406,18 @@
     const a = c * (1 - z * se), b = c * (1 + z * se);
     return [Math.min(a, b), Math.max(a, b)];
   }
+  // 必要なデータ数の目安：Ppk の推定値が c のとき、信頼区間（両側 1−alpha、Bissell の近似）の下限が
+  // target 以上になる最小の n。c が target 以下なら、データを増やしても届かないので null
+  function requiredN(c, target, alpha = 0.05, nMax = 1e6) {
+    if (!(c > target) || !(c > 0)) return null;
+    const lower = n => cpkCI(c, n, alpha)[0];
+    if (lower(2) >= target) return 2;
+    // 下限は n とともに単調に増えるので二分法で探す
+    let lo = 2, hi = 4;
+    while (lower(hi) < target) { lo = hi; hi *= 2; if (hi > nMax) return null; }
+    while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); if (lower(mid) >= target) hi = mid; else lo = mid; }
+    return hi;
+  }
   // 規格外れの割合（ppm）。正規分布を仮定した推定値
   function expectedPpm(mu, sigma, usl, lsl) {
     if (!(sigma > 0)) return null;
@@ -528,7 +540,7 @@
     lgamma, ibeta, gammaP, gammaQ, erfc, normCdf, normSf, normPdf, normPpf, chi2Cdf, chi2Ppf,
     tCdf, tSf, tPdf, tPpf, fCdf, fSf, fPdf, fPpf,
     sum, mean, variance, sd, skewness, kurtosis, shapiro, fTest, tTest, correlation,
-    FACTORS, factor, sigmaWithin, sigmaFromGroups, consecutiveGroups, capability, controlCharts, cpCI, cpkCI, expectedPpm, observedOut, runRules, RULES, RECOMMENDED_SUBGROUPS,
+    FACTORS, factor, sigmaWithin, sigmaFromGroups, consecutiveGroups, capability, controlCharts, cpCI, cpkCI, requiredN, expectedPpm, observedOut, runRules, RULES, RECOMMENDED_SUBGROUPS,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CpkStats = api;

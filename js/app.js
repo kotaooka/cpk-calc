@@ -1,7 +1,7 @@
 // 画面処理：データ読み込み、工程能力解析、2群の検定、結果の表示と保存
 (function () {
   'use strict';
-  const S = window.CpkStats, X = window.CpkXlsx, C = window.CpkCharts;
+  const S = window.CpkStats, X = window.CpkXlsx, C = window.CpkCharts, SP = window.CpkSpec, G = window.CpkGrid;
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -147,7 +147,7 @@
     const t = e.target;
     // 入力欄への貼り付けはそのまま
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-    if ($('#dataSec').hidden) return;
+    if ($('#dataSec').hidden || st.src === 'grid') return;
     const text = e.clipboardData && e.clipboardData.getData('text/plain');
     if (!text) return;
     e.preventDefault();
@@ -229,7 +229,7 @@
     // シートの規格値は、まだ入力されていない対象にだけ入れる
     for (const [l, v] of Object.entries(T.sheetSpec)) {
       const cur = st.spec[l];
-      if (!cur || (!String(cur.usl).trim() && !String(cur.lsl).trim())) st.spec[l] = { usl: v.usl != null ? String(v.usl) : '', lsl: v.lsl != null ? String(v.lsl) : '' };
+      if (!cur || (!String(cur.usl).trim() && !String(cur.lsl).trim())) st.spec[l] = { usl: v.usl != null ? String(v.usl) : '', lsl: v.lsl != null ? String(v.lsl) : '', draw: '', nominal: null };
     }
     // 解析対象の候補が変わったら選択を引き継ぐ
     const L = labels();
@@ -237,12 +237,15 @@
     renderTargets();
     $('#capSetup').hidden = $('#capOpts').hidden = false;
     $('#testSetup').hidden = false;
+    // 検定の対象：選んでいた項目が残っていれば選んだままにする
+    const prevA = $('#tA').value, prevB = $('#tB').value;
     $('#tA').innerHTML = $('#tB').innerHTML = L.map(l => `<option>${esc(l)}</option>`).join('');
+    if (L.includes(prevA)) $('#tA').value = prevA;
+    if (L.includes(prevB) && prevB !== $('#tA').value) $('#tB').value = prevB; else if (L.length > 1) $('#tB').selectedIndex = $('#tA').selectedIndex === 1 ? 0 : 1;
     // ⑤ サブグループの分け方の候補（データの列・行の名前）
     if (!L.includes(st.groupBy)) st.groupBy = '';
     $('#groupBy').innerHTML = `<option value="">連続する n 個ずつ</option>` + L.map(l => `<option value="${esc(l)}"${l === st.groupBy ? ' selected' : ''}>${st.dir === '列方向' ? '列' : '行'}「${esc(l)}」の値で分ける</option>`).join('');
     syncGroupUi();
-    if (L.length > 1) $('#tB').selectedIndex = 1;
   }
 
   // ---------- 解析対象と規格値 ----------
@@ -258,21 +261,49 @@
   });
   $('#selAll').addEventListener('click', () => { st.targets = [...labels()]; renderTargets(); });
   $('#selNone').addEventListener('click', () => { st.targets = []; renderTargets(); });
+  const specOf0 = t => st.spec[t] || (st.spec[t] = { usl: '', lsl: '', draw: '', nominal: null });
   function renderSpec() {
     $('#specWrap').hidden = !st.targets.length;
+    // 入力中の欄を描き直しても、フォーカスとカーソル位置を保つ
+    const act = document.activeElement, keep = act && act.closest && act.closest('#specBody') ? [act.dataset.t, act.dataset.k, act.selectionStart] : null;
     $('#specBody').innerHTML = st.targets.map((t, i) => {
-      const s = st.spec[t] || (st.spec[t] = { usl: '', lsl: '' });
+      const s = specOf0(t);
       const dis = st.sameSpec && i > 0 ? ' disabled' : '';
-      const v = st.sameSpec && i > 0 ? st.spec[st.targets[0]] : s;
+      const v = st.sameSpec && i > 0 ? specOf0(st.targets[0]) : s;
       const n = series(t).filter(x => x != null).length;
-      return `<tr><td class="l">${esc(t)}</td><td><input class="num" type="text" inputmode="decimal" data-t="${esc(t)}" data-k="usl" value="${esc(v.usl)}"${dis}></td>` +
+      const pr = v.draw && String(v.draw).trim() ? SP.parseTolerance(v.draw) : null;
+      return `<tr><td class="l">${esc(t)}</td>` +
+        `<td class="draw l"><input type="text" data-t="${esc(t)}" data-k="draw" value="${esc(v.draw || '')}" placeholder="例：10 +0.1/-0.05" class="${pr && pr.error ? 'bad' : ''}"${dis} aria-label="${esc(t)} の図面の表記">` +
+        `<span class="msg">${pr && pr.error ? esc(pr.error) : ''}</span></td>` +
+        `<td><input class="num" type="text" inputmode="decimal" data-t="${esc(t)}" data-k="usl" value="${esc(v.usl)}"${dis}></td>` +
         `<td><input class="num" type="text" inputmode="decimal" data-t="${esc(t)}" data-k="lsl" value="${esc(v.lsl)}"${dis}></td><td class="num">${n}</td></tr>`;
     }).join('');
+    if (keep) { const el = $(`#specBody input[data-t="${CSS.escape(keep[0])}"][data-k="${keep[1]}"]`); if (el) { el.focus(); try { el.setSelectionRange(keep[2], keep[2]); } catch (e) { /* 無視 */ } } }
   }
   $('#specBody').addEventListener('input', e => {
     const i = e.target; if (!i.dataset.t) return;
-    st.spec[i.dataset.t][i.dataset.k] = i.value;
-    if (st.sameSpec && i.dataset.t === st.targets[0]) $$(`#specBody input[data-k="${i.dataset.k}"]`).slice(1).forEach(x => { x.value = i.value; });
+    const sp = specOf0(i.dataset.t), k = i.dataset.k;
+    const row = i.closest('tr');
+    if (k === 'draw') {
+      // 図面の表記から上限・下限を計算して入れる
+      sp.draw = i.value;
+      const pr = i.value.trim() ? SP.parseTolerance(i.value) : null;
+      const msg = row.querySelector('.msg');
+      i.classList.toggle('bad', !!(pr && pr.error)); msg.textContent = pr && pr.error ? pr.error : '';
+      if (pr && !pr.error) {
+        sp.usl = pr.usl != null ? String(pr.usl) : ''; sp.lsl = pr.lsl != null ? String(pr.lsl) : ''; sp.nominal = pr.nominal;
+        row.querySelector('[data-k="usl"]').value = sp.usl; row.querySelector('[data-k="lsl"]').value = sp.lsl;
+      } else if (!pr) sp.nominal = null;
+    } else {
+      // 上限・下限を直接変えたら、図面の表記とは合わなくなるので表記を消す
+      sp[k] = i.value;
+      if (sp.draw) { sp.draw = ''; sp.nominal = null; const d = row.querySelector('[data-k="draw"]'); d.value = ''; d.classList.remove('bad'); row.querySelector('.msg').textContent = ''; }
+    }
+    if (st.sameSpec && i.dataset.t === st.targets[0]) $$('#specBody tr').slice(1).forEach(tr => {
+      tr.querySelector('[data-k="draw"]').value = sp.draw || ''; tr.querySelector('[data-k="usl"]').value = sp.usl; tr.querySelector('[data-k="lsl"]').value = sp.lsl;
+    });
+    saveGridSoon();
+    liveSoon();
   });
   $('#sameSpec').addEventListener('change', e => { st.sameSpec = e.target.checked; renderSpec(); });
 
@@ -307,7 +338,7 @@
     return L;
   }
   // ③ 工程能力図：ヒストグラムに、群内 σ・全体 σ の正規分布曲線（度数に合わせて拡大）と規格線を重ねる
-  function histChart(x, usl, lsl, cap, label) {
+  function histChart(x, usl, lsl, cap, label, nominal = null) {
     const n = x.length, k = Math.max(5, Math.ceil(Math.log2(n) + 1)), mu = cap.mean;
     let lo = Math.min(...x), hi = Math.max(...x);
     if (lo === hi) { lo -= 0.5; hi += 0.5; }
@@ -322,7 +353,8 @@
     const layers = [{ type: 'bars', data: bars, color: 'var(--s1)', label: '度数' }];
     layers.push({ type: 'line', data: curve(cap.sigmaOverall), color: 'var(--ink2)', width: 2, label: '全体（Pp/Ppk）' });
     if (cap.sigmaWithin) layers.push({ type: 'line', data: curve(cap.sigmaWithin), color: 'var(--s3)', width: 2, dash: '6 4', label: '群内（Cp/Cpk）' });
-    return C.plot({ title: `工程能力図（${label}）`, xLabel: '値', yLabel: '度数', yZero: true, layers: [...layers, ...specLines(usl, lsl, mu)] });
+    const nom = nominal != null ? [{ type: 'vline', x: nominal, color: 'var(--muted)', dash: '3 3', text: `基準値 ${num(nominal)}` }] : [];
+    return C.plot({ title: `工程能力図（${label}）`, xLabel: '値', yLabel: '度数', yZero: true, layers: [...layers, ...nom, ...specLines(usl, lsl, mu)] });
   }
   function qqChart(x, label) {
     // scipy.stats.probplot と同じ Filliben の順序統計量中央値
@@ -363,6 +395,13 @@
 
   // ---------- 工程能力解析 ----------
   const level = (v, J = (st.capResult && st.capResult.judge) || st.judge) => v == null ? null : v >= J.ex ? ['ex', '◎ 非常に良好'] : v >= J.gd ? ['gd', '○ 良好'] : v >= J.wa ? ['wa', '△ 要注意'] : ['ng', '✕ 不良'];
+  // 今の Ppk のまま、95% 信頼区間の下限を「○ 良好」の基準値以上にするのに必要なデータ数
+  function needN(r, J) {
+    const c = r.cap;
+    if (c.Ppk == null) return '―';
+    if (r.reqN == null) return `届きません<br><small>Ppk ${fmt(c.Ppk)} が ${J.gd} 以下のため、データを増やしても下限は ${J.gd} 以上になりません</small>`;
+    return `${r.reqN.toLocaleString('ja-JP')} 個<br><small>${r.reqN <= c.n ? `足りています（今 ${c.n} 個）` : `あと ${(r.reqN - c.n).toLocaleString('ja-JP')} 個（今 ${c.n} 個）`}。95%下限 ≥ ${J.gd} に必要な数</small>`;
+  }
   const BASIS = { Cpk: 'Cpk', Ppk: 'Ppk', PpkLow: 'Ppk 95%下限' };
   // 判定に使う値。Cpk を計算できないときは Ppk で代える
   function judgeValue(c, basis) {
@@ -372,10 +411,12 @@
   }
   const lvCell = v => { const L = level(v); return L ? `<span class="lv ${L[0]}">${fmt(v)}</span>` : '―'; };
 
-  $('#runCap').addEventListener('click', () => {
-    if (!st.targets.length) { toast('解析対象を選んでください'); return; }
+  $('#runCap').addEventListener('click', () => runCap({ scroll: true }));
+  // quiet: 入力に合わせた自動更新のときは注意を出さず、画面も動かさない
+  function runCap({ scroll = false, quiet = false } = {}) {
+    if (!st.targets.length) { if (!quiet) toast('解析対象を選んでください'); return; }
     const J = st.judge;
-    if (!(J.ex > J.gd && J.gd > J.wa)) { toast('判定の基準値は ◎ ＞ ○ ＞ △ の順に大きくしてください'); return; }
+    if (!(J.ex > J.gd && J.gd > J.wa)) { if (!quiet) toast('判定の基準値は ◎ ＞ ○ ＞ △ の順に大きくしてください'); return; }
     const log = [], rows = [];
     const m = st.subgroup, ddof = st.std === '母集団標準偏差' ? 0 : 1, gb = st.groupBy;
     const keys = gb ? seriesRaw(gb).map(v => v == null ? '' : String(v).trim()) : null;
@@ -421,14 +462,15 @@
           log.push(['warn', `${t}: ${name[ch]} ルール${h.rule}（${h.text}）: 点 ${ptName(ch, h.from)}${h.to > h.from ? `〜${ptName(ch, h.to)}` : ''}`]);
       }
       if (cc && cc.k != null && groups && cc.k < groups.length) log.push(['info', `${t}: サイズが 2〜10 でないサブグループ ${groups.length - cc.k} 組は管理図に描いていません`]);
-      rows.push({ t, x, usl, lsl, cap, sw, cc, hits, groupKeys, max: Math.max(...x), min: Math.min(...x), skew: S.skewness(x), kurt: S.kurtosis(x),
+      const reqN = cap.Ppk != null ? S.requiredN(cap.Ppk, J.gd, 0.05) : null;
+      rows.push({ t, x, usl, lsl, nominal: specOf(t, i).nominal ?? null, reqN, cap, sw, cc, hits, groupKeys, max: Math.max(...x), min: Math.min(...x), skew: S.skewness(x), kurt: S.kurtosis(x),
         type: usl != null && lsl != null ? '両側' : usl != null ? '上側のみ' : '下側のみ' });
     });
     st.capResult = { rows, log, m, ddof, gb, judge: { ...J }, rules: st.rules };
-    renderCap();
-  });
+    renderCap(scroll);
+  }
 
-  function renderCap() {
+  function renderCap(scroll = true) {
     const { rows, log, m, gb, judge } = st.capResult;
     $('#capResult').hidden = false;
     $('#judgeNote').textContent = `判定は ${BASIS[judge.basis]} で行います${judge.basis === 'Cpk' ? '（Cpk を計算できないときは Ppk）' : ''}。推定不良率は正規分布を仮定した値です。`;
@@ -437,7 +479,7 @@
     $('#printHead').innerHTML = `<h1>工程能力解析</h1>ファイル：${esc(st.fileName)}　シート：${esc(st.wb.sheets[st.sheet].name)}　作成：${esc(new Date().toLocaleString('ja-JP'))}<br>` +
       `サブグループ：${gb ? `「${esc(gb)}」の値で分ける` : `連続する ${m} 個ずつ`}　全体の標準偏差：${st.capResult.ddof ? '標本（n−1）' : '母集団（n）'}　判定：${BASIS[judge.basis]}（◎ ${th(judge.ex)}／○ ${th(judge.gd)}／△ ${th(judge.wa)}）`;
     $('#capLog').innerHTML = log.map(([k, s]) => `<li class="${k}">${esc(s)}</li>`).join('');
-    if (!rows.length) { $('#summary').innerHTML = ''; $('#capDetail').innerHTML = ''; $('#capResult').scrollIntoView({ behavior: 'smooth' }); return; }
+    if (!rows.length) { $('#summary').innerHTML = ''; $('#capDetail').innerHTML = ''; if (scroll) $('#capResult').scrollIntoView({ behavior: 'smooth' }); return; }
     $('#summary').innerHTML = `<table><thead><tr><th class="l">解析対象</th><th>n</th><th>平均</th><th>σ(群内)</th><th>σ(全体)</th><th>Cp</th><th>Cpk</th><th>Pp</th><th>Ppk</th><th>Ppk 95%信頼区間</th><th>推定不良率 ppm<br><small>群内 ／ 全体</small></th><th>規格外れ<br><small>実測</small></th><th>管理図<br><small>異常</small></th><th>判定（${BASIS[judge.basis]}）</th></tr></thead><tbody>` +
       rows.map(r => {
         const c = r.cap, [j, used] = judgeValue(c, judge.basis), L = level(j);
@@ -462,6 +504,7 @@
         ['Pp', `${fmt(c.Pp)}<br><small>95%: ${c.PpCI[0] != null ? `${fmt(c.PpCI[0])}～${fmt(c.PpCI[1])}` : '―'}</small>`],
         ['Ppk', `${lvCell(c.Ppk)}<br><small>95%: ${c.PpkCI[0] != null ? `${fmt(c.PpkCI[0])}～${fmt(c.PpkCI[1])}` : '―'}</small>`],
         ['歪度／尖度', `${fmt(r.skew)}<br><small>${fmt(r.kurt)}</small>`], ['Shapiro-Wilk p', r.sw ? fmtP(r.sw.p) : '―'],
+        ['必要データ数の目安', needN(r, judge)],
         ...[['推定不良率（群内）', c.ppmWithin], ['推定不良率（全体）', c.ppmOverall]].map(([k, p]) => [k, p ? `${fmtPpm(p.total)} ppm<br><small>上 ${fmtPpm(p.upper)} ／ 下 ${fmtPpm(p.lower)}</small>` : '―']),
         ['規格外れ（実測）', `${c.observed.total} 個<br><small>上 ${c.observed.upper ?? '―'} ／ 下 ${c.observed.lower ?? '―'}（${fmtPpm(c.observed.ppm)} ppm）</small>`],
         ['サブグループ', gb ? `${c.subgroups} 組<br><small>「${esc(gb)}」で分ける</small>` : m === 1 ? '個別値' : `${c.subgroups} 組<br><small>${m} 個ずつ</small>`],
@@ -471,7 +514,7 @@
         (hitList.length ? `<ul class="rulehits">${hitList.map(s => `<li>! ${esc(s)}</li>`).join('')}</ul>` : '') + '<div class="charts"></div>';
       det.appendChild(sec);
       const g = sec.querySelector('.charts'), sh = st.show;
-      if (sh.hist) addChart(g, `capability_${r.t}`, () => histChart(r.x, r.usl, r.lsl, c, r.t));
+      if (sh.hist) addChart(g, `capability_${r.t}`, () => histChart(r.x, r.usl, r.lsl, c, r.t, r.nominal));
       if (sh.qq) addChart(g, `qq_${r.t}`, () => qqChart(r.x, r.t));
       if (sh.density) addChart(g, `density_${r.t}`, () => densityChart(c.mean, c.sigmaOverall, r.usl, r.lsl, r.t));
       const cc = r.cc, H = r.hits;
@@ -485,7 +528,7 @@
         if (sh.s) addChart(g, `s_${r.t}`, () => ctrlChart(`s 管理図（${r.t}）`, 'サブグループ番号', '標準偏差', cc.s, H.s));
       }
     }
-    $('#capResult').scrollIntoView({ behavior: 'smooth' });
+    if (scroll) $('#capResult').scrollIntoView({ behavior: 'smooth' });
   }
 
   $('#dlCap').addEventListener('click', () => {
@@ -493,13 +536,14 @@
     const head = ['解析対象', 'サンプル数', '規格種別', '上限規格', '下限規格', '最大値', '最小値', '平均値', 'σ(群内)', 'σ(群内)の推定方法', '標準偏差(全体)',
       'Cp', 'Cpk', 'CPU', 'CPL', 'Pp', 'Pp_lower (95%)', 'Pp_upper (95%)', 'Ppk', 'Ppk_lower (95%, Bissell)', 'Ppk_upper (95%, Bissell)',
       '推定不良率 群内 上側 (ppm)', '推定不良率 群内 下側 (ppm)', '推定不良率 群内 合計 (ppm)', '推定不良率 全体 上側 (ppm)', '推定不良率 全体 下側 (ppm)', '推定不良率 全体 合計 (ppm)',
-      '規格外れ 上側 (個)', '規格外れ 下側 (個)', '規格外れ (ppm)', 'サブグループ数', '管理図の異常 (件)', '判定に使った値', '判定', '尖度', '歪度', 'Shapiro-Wilk p値'];
+      '規格外れ 上側 (個)', '規格外れ 下側 (個)', '規格外れ (ppm)', 'サブグループ数', '管理図の異常 (件)', '判定に使った値', '判定', '必要データ数 (Ppk 95%下限 ≥ ○の基準)', '図面の表記', '基準値', '尖度', '歪度', 'Shapiro-Wilk p値'];
     const rows = R.rows.map(r => {
       const c = r.cap, pw = c.ppmWithin || {}, po = c.ppmOverall || {}, [j, used] = judgeValue(c, R.judge.basis), L = level(j, R.judge);
       return [r.t, c.n, r.type, r.usl, r.lsl, r.max, r.min, c.mean, c.sigmaWithin, c.sigmaWithinMethod, c.sigmaOverall,
         c.Cp, c.Cpk, c.Cpu, c.Cpl, c.Pp, c.PpCI[0], c.PpCI[1], c.Ppk, c.PpkCI[0], c.PpkCI[1],
         pw.upper, pw.lower, pw.total, po.upper, po.lower, po.total, c.observed.upper, c.observed.lower, c.observed.ppm,
-        c.subgroups, R.rules ? r.hits.main.length + r.hits.range.length + r.hits.s.length : null, used, L ? L[1] : null, r.kurt, r.skew, r.sw ? r.sw.p : null];
+        c.subgroups, R.rules ? r.hits.main.length + r.hits.range.length + r.hits.s.length : null, used, L ? L[1] : null, r.reqN,
+        ((st.sameSpec ? st.spec[st.targets[0]] : st.spec[r.t]) || {}).draw || null, r.nominal, r.kurt, r.skew, r.sw ? r.sw.p : null];
     });
     const cond = [['項目', '値'], ['ファイル', st.fileName], ['シート', st.wb.sheets[st.sheet].name], ['計算対象の方向', st.dir],
       ['サブグループ', R.gb ? `「${R.gb}」の値で分ける` : `連続する ${R.m} 個ずつ`],
@@ -518,7 +562,7 @@
       show_hist: st.show.hist, show_qq: st.show.qq, show_density: st.show.density, show_xbar: st.show.xbar, show_r: st.show.r, show_s: st.show.s,
       same_spec: st.sameSpec, selected_targets: st.targets,
       group_by: st.groupBy, run_rules: st.rules, judge_basis: st.judge.basis, judge_thresholds: [st.judge.ex, st.judge.gd, st.judge.wa],
-      spec_table: st.targets.map((t, i) => { const sp = st.sameSpec ? st.spec[st.targets[0]] : st.spec[t]; return [t, String(sp.usl), String(sp.lsl)]; }),
+      spec_table: st.targets.map((t, i) => { const sp = st.sameSpec ? st.spec[st.targets[0]] : st.spec[t]; return [t, String(sp.usl), String(sp.lsl), String(sp.draw || '')]; }),
     };
     download(JSON.stringify(s, null, 2), `${stamp()}_settings.json`, 'application/json');
   });
@@ -532,7 +576,10 @@
     st.firstRowData = !!s.include_first_row; st.firstColData = !!s.include_first_column; $('#firstRowData').checked = st.firstRowData; $('#firstColData').checked = st.firstColData;
     if (s.calc_direction) { st.dir = s.calc_direction; segSet('#dirSeg', st.dir); }
     st.sameSpec = !!s.same_spec; $('#sameSpec').checked = st.sameSpec;
-    for (const row of s.spec_table || []) if (Array.isArray(row) && row.length >= 3) st.spec[String(row[0])] = { usl: String(row[1] ?? ''), lsl: String(row[2] ?? '') };
+    for (const row of s.spec_table || []) if (Array.isArray(row) && row.length >= 3) {
+      const draw = String(row[3] ?? ''), pr = draw.trim() ? SP.parseTolerance(draw) : null;
+      st.spec[String(row[0])] = { usl: String(row[1] ?? ''), lsl: String(row[2] ?? ''), draw, nominal: pr && !pr.error ? pr.nominal : null };
+    }
     st.targets = (s.selected_targets || []).map(String);
     if (typeof s.group_by === 'string') st.groupBy = s.group_by;
     if (typeof s.run_rules === 'boolean') { st.rules = s.run_rules; $('#runRules').checked = st.rules; }
@@ -653,7 +700,121 @@
   $('#printCap').addEventListener('click', () => window.print());
   $('#printTest').addEventListener('click', () => window.print());
 
+  // ---------- 画面で入力（直接入力・自動保存） ----------
+  const GRID_KEY = 'cpk-calc-grid-v1', SRC_KEY = 'cpk-calc-src';
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  };
+  st.src = 'file';
+  let fileState = null; // 「ファイル・貼り付け」に戻したときに元の状態に戻すため
+  const knownCols = new Set(); // 自動で解析対象に入れた項目（外した項目を勝手に戻さない）
+  const grid = G.create($('#gridWrap'), {
+    onChange: () => { gridChangedSoon(); },
+    onRename: (oldName, newName) => {
+      // 項目名を変えても、規格値と解析対象を引き継ぐ
+      if (!oldName || oldName === newName) return;
+      if (st.spec[oldName] && !st.spec[newName]) { st.spec[newName] = st.spec[oldName]; delete st.spec[oldName]; }
+      st.targets = st.targets.map(t => t === oldName ? newName : t);
+      if (st.groupBy === oldName) st.groupBy = newName;
+      if (knownCols.has(oldName)) { knownCols.delete(oldName); knownCols.add(newName); }
+    },
+  });
+  function gridToWb() {
+    st.wb = { sheets: [{ name: '直接入力', cells: grid.toCells() }] };
+    st.fileName = '画面で入力したデータ'; st.sheet = 0;
+    st.firstRowData = false; st.firstColData = true; st.dir = '列方向';
+  }
+  // 数値が 2 個以上入った新しい項目は、自動で解析対象に入れる
+  function autoTargets() {
+    grid.model.cols.forEach((col, c) => {
+      const name = String(col.name).trim(); if (!name || col.type !== 'num' || knownCols.has(name)) return;
+      const n = grid.model.rows.filter(r => G.toNum(r[c]) != null).length;
+      if (n >= 2) { knownCols.add(name); if (!st.targets.includes(name)) st.targets.push(name); }
+    });
+  }
+  let gridTimer = null, saveTimer = null, liveTimer = null;
+  function gridChangedSoon() {
+    clearTimeout(gridTimer);
+    gridTimer = setTimeout(() => { if (st.src !== 'grid') return; gridToWb(); autoTargets(); rebuild(); saveGridSoon(); liveSoon(); }, 250);
+  }
+  function saveGridSoon() {
+    if (st.src !== 'grid') return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      const labels = grid.model.cols.map(c => String(c.name).trim());
+      const spec = {}; for (const l of labels) if (st.spec[l]) spec[l] = st.spec[l];
+      const ok = store.set(GRID_KEY, { model: grid.model, spec, targets: st.targets, known: [...knownCols], sameSpec: st.sameSpec, savedAt: new Date().toISOString() });
+      $('#gSaved').textContent = ok ? `自動保存しました（${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}）` : 'このブラウザでは保存できません（プライベートモードなど）';
+    }, 400);
+  }
+  // 入力に合わせて結果を更新（一度「解析する」を押したあと）
+  function liveSoon() {
+    if (st.src !== 'grid' || !$('#liveUpdate').checked || !st.capResult) return;
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => runCap({ quiet: true }), 600);
+  }
+  function setSource(src, { silent = false } = {}) {
+    if (src === st.src) return;
+    if (src === 'grid') {
+      fileState = { wb: st.wb, fileName: st.fileName, sheet: st.sheet, firstRowData: st.firstRowData, firstColData: st.firstColData, dir: st.dir, targets: st.targets };
+      st.src = 'grid';
+      const saved = store.get(GRID_KEY);
+      if (saved && saved.model && !grid.hasData()) {
+        grid.set(saved.model);
+        Object.assign(st.spec, saved.spec || {});
+        st.targets = saved.targets || [];
+        (saved.known || []).forEach(k => knownCols.add(k));
+        st.sameSpec = !!saved.sameSpec; $('#sameSpec').checked = st.sameSpec;
+        if (!silent && grid.hasData()) toast('前回入力したデータを読み込みました');
+      } else { grid.render(); st.targets = []; }
+      gridToWb(); autoTargets();
+    } else {
+      st.src = 'file';
+      if (fileState) Object.assign(st, fileState); else { st.wb = null; st.targets = []; }
+      $('#firstRowData').checked = st.firstRowData; $('#firstColData').checked = st.firstColData; segSet('#dirSeg', st.dir);
+    }
+    segSet('#srcSeg', src);
+    $('#srcFile').hidden = src !== 'file'; $('#srcGrid').hidden = src !== 'grid';
+    store.set(SRC_KEY, src);
+    st.capResult = null; $('#capResult').hidden = true;
+    if (st.wb) rebuild(); else { $('#capSetup').hidden = $('#capOpts').hidden = $('#testSetup').hidden = true; }
+  }
+  segInit('#srcSeg', v => setSource(v));
+  $('#gAddCol').addEventListener('click', () => grid.addCol());
+  $('#gAddRows').addEventListener('click', () => grid.addRows(10));
+  $('#gClear').addEventListener('click', () => {
+    if (grid.hasData() && !confirm('入力した値と項目名をすべて消去します。よろしいですか？（元に戻せません）')) return;
+    grid.model.cols.forEach(c => { delete st.spec[String(c.name).trim()]; });
+    st.targets = []; knownCols.clear(); st.capResult = null; $('#capResult').hidden = true;
+    grid.clear();
+  });
+  $('#gSave').addEventListener('click', () => {
+    if (!grid.hasData()) { toast('保存するデータがありません'); return; }
+    download(X.writeXlsx([{ name: '測定値', rows: grid.toRows() }]), `${stamp()}_測定値.xlsx`, XLSX_TYPE);
+  });
+
+  // ---------- 必要なデータ数の目安（計画用） ----------
+  function renderPlanner() {
+    const c = parseFloat($('#pnC').value), t = parseFloat($('#pnT').value), a = parseFloat($('#pnA').value);
+    const out = $('#pnOut');
+    if (!(c > 0) || !(t > 0)) { out.innerHTML = '<span class="hint">見込みの Ppk と示したい値を入れてください</span>'; return; }
+    const n = S.requiredN(c, t, a);
+    let h = n == null
+      ? `<div><span class="big">届きません</span>　見込みの Ppk（${c}）が示したい値（${t}）以下のため、データを増やしても下限は ${t} 以上になりません。</div>`
+      : `<div>必要なデータ数：<span class="big">${n.toLocaleString('ja-JP')}</span> 個　<span class="hint">（Ppk が ${c} のとき、${Math.round((1 - a) * 100)}% 信頼区間の下限が ${t} 以上になる最小の数）</span></div>`;
+    // 見込みの Ppk ごとの早見表
+    let cs = [1.4, 1.5, 1.67, 1.8, 2.0, 2.33, 2.5, 3.0].filter(v => v > t + 1e-9).slice(0, 6);
+    if (cs.length < 3) cs = [1.1, 1.2, 1.33, 1.5].map(k => +(t * k).toFixed(2));
+    h += '<table><thead><tr><th class="l">見込みの Ppk</th>' + cs.map(v => `<th>${v.toFixed(2)}</th>`).join('') + '</tr></thead><tbody><tr><td class="l">必要なデータ数</td>' +
+      cs.map(v => `<td class="num">${(S.requiredN(v, t, a) ?? '―').toLocaleString('ja-JP')}</td>`).join('') + '</tr></tbody></table>';
+    out.innerHTML = h;
+  }
+  ['#pnC', '#pnT', '#pnA'].forEach(id => $(id).addEventListener('input', renderPlanner));
+  renderPlanner();
+
   // ---------- 起動 ----------
   applyTheme(theme);
+  if (store.get(SRC_KEY) === 'grid') setSource('grid', { silent: false });
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

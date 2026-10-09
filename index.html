@@ -147,6 +147,37 @@ dl.kv dd small { color: var(--ink2); font-size: .74rem; }
 .explain hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 8px 16px; border-radius: 999px; font-size: .88rem; z-index: 20; }
 .paste-hint { margin-top: 10px; font-size: .85rem; }
+.src-seg { margin-bottom: 12px; }
+.grid-tools { margin-bottom: 6px; }
+.btn.danger { color: var(--ng); }
+.saved { color: var(--ok); }
+.grid-wrap { overflow: auto; max-height: 520px; border: 1px solid var(--line); border-radius: var(--r); margin-top: 8px; }
+table.grid { border-collapse: separate; border-spacing: 0; min-width: 0; font-size: .9rem; }
+table.grid th, table.grid td { padding: 0; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); }
+table.grid thead th { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 4px; vertical-align: top; }
+table.grid td.rn, table.grid th.rn { position: sticky; left: 0; z-index: 1; background: var(--bg); color: var(--muted); text-align: right; padding: 0 8px; font-family: var(--f-num); font-size: .8rem; min-width: 3em; }
+table.grid thead th.rn { z-index: 3; }
+table.grid td input { width: 7.5em; border: 0; border-radius: 0; background: var(--surface); padding: 6px 8px; font-family: var(--f-num); text-align: right; }
+table.grid td input.txt { text-align: left; font-family: var(--f-ui); }
+table.grid td input:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-weak); }
+table.grid td input.bad { color: var(--ng); background: var(--ng-weak); }
+table.grid th .gh { display: flex; flex-direction: column; gap: 3px; }
+table.grid th .gh input { width: 7.5em; font-weight: 700; padding: 4px 6px; }
+table.grid th .gh .gsub { display: flex; gap: 4px; align-items: center; }
+table.grid th .gh select { font-size: .75rem; padding: 2px 4px; }
+table.grid th .gh .gdel { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: .9rem; padding: 0 4px; }
+table.grid th .gh .gstat { font-size: .7rem; color: var(--muted); font-weight: 400; font-family: var(--f-num); }
+table.spec td.draw input { width: 15em; font-family: var(--f-num); }
+table.spec td.draw input.bad { border-color: var(--ng); }
+table.spec td.draw .msg { display: block; font-size: .72rem; color: var(--ng); white-space: normal; text-align: left; }
+details.planner summary { cursor: pointer; list-style: none; }
+details.planner summary::-webkit-details-marker { display: none; }
+details.planner summary::before { content: "▸ "; color: var(--muted); }
+details.planner[open] summary::before { content: "▾ "; }
+.plan-out { margin: 10px 0; font-size: .95rem; }
+.plan-out .big { font-size: 1.5rem; font-weight: 700; font-family: var(--f-num); }
+.plan-out table { min-width: 0; margin-top: 6px; }
+.needn { margin-top: 4px; font-size: .85rem; color: var(--ink2); }
 .paste-hint .btn { margin-left: 6px; }
 .print-head { display: none; }
 .rulehits { margin: 4px 0 10px; padding: 0; list-style: none; font-size: .82rem; color: var(--warn); }
@@ -155,7 +186,7 @@ select:disabled { opacity: .5; }
   @page { size: A4; margin: 12mm; }
   :root { --bg: #fff !important; }
   body { background: #fff; font-size: 11px; }
-  header.top, #dataSec, #capSetup, #capOpts, #testSetup, footer, .no-print, .chart .save, .toast { display: none !important; }
+  header.top, #dataSec, #capSetup, #capOpts, #testSetup, #planner, footer, .no-print, .chart .save, .toast { display: none !important; }
   .wrap { max-width: none; padding: 0; }
   .box { border: 0; padding: 0; margin: 0; }
   .box > h2 { font-size: 14px; }
@@ -195,7 +226,9 @@ footer a { color: inherit; }
   <!-- データ（工程能力解析・検定で共通） -->
   <section id="dataSec">
     <div class="box">
-      <h2><span class="step">1</span>データの読み込み</h2>
+      <h2><span class="step">1</span>データ</h2>
+      <div class="seg src-seg" id="srcSeg" role="tablist"><button type="button" data-v="file" aria-pressed="true">ファイル・貼り付け</button><button type="button" data-v="grid" aria-pressed="false">画面で入力</button></div>
+      <div id="srcFile">
       <div class="drop" id="drop">
         <strong>Excel（.xlsx）または CSV ファイル</strong>をここにドラッグするか、
         <label class="btn small" style="display:inline-block">ファイルを選択<input type="file" id="fileIn" accept=".xlsx,.xlsm,.csv,.tsv,.txt" hidden></label>
@@ -221,6 +254,21 @@ footer a { color: inherit; }
         <div class="tbl-wrap" id="preview"></div>
         <div class="hint" id="previewNote"></div>
       </div>
+      </div>
+      <!-- 画面で入力 -->
+      <div id="srcGrid" hidden>
+        <div class="row grid-tools">
+          <button class="btn small" id="gAddCol" type="button">＋ 項目を追加</button>
+          <button class="btn small" id="gAddRows" type="button">＋ 10 行</button>
+          <button class="btn small" id="gSave" type="button">Excel で保存</button>
+          <button class="btn small danger" id="gClear" type="button">すべて消去</button>
+          <label class="chk"><input type="checkbox" id="liveUpdate" checked>入力に合わせて結果を更新</label>
+          <span class="hint saved" id="gSaved"></span>
+        </div>
+        <div class="hint">Enter で下へ、Tab で右へ移動します。最後の行で Enter を押すと行が増えます。Excel でコピーした範囲もそのまま貼り付けられます（1行目が文字なら項目名になります）。<br>
+          項目名の下の「文字」を選ぶと、ロット番号などを入れる列になります（「サブグループの分け方」で使えます）。入力した値はこの端末のブラウザに自動で保存されます。</div>
+        <div class="grid-wrap" id="gridWrap"></div>
+      </div>
     </div>
   </section>
 
@@ -233,9 +281,9 @@ footer a { color: inherit; }
       <div id="specWrap" hidden>
         <div class="row" style="margin-top:14px">
           <label class="chk"><input type="checkbox" id="sameSpec">すべての対象の規格値を同じにする</label>
-          <span class="hint">片側規格は使わない側を空欄に。両方空欄の対象は解析しません。</span>
         </div>
-        <div class="tbl-wrap"><table><thead><tr><th class="l">解析対象</th><th>規格上限値（USL）</th><th>規格下限値（LSL）</th><th>データ数</th></tr></thead><tbody id="specBody"></tbody></table></div>
+        <div class="hint" style="margin-top:6px">「図面の表記」に図面のとおり書くと、規格上限値・下限値を計算して入れます（例：<span class="mono">10±0.1</span>、<span class="mono">10 +0.1/-0.05</span>、<span class="mono">φ10 0/-0.05</span>、<span class="mono">9.9～10.1</span>、<span class="mono">≦0.05</span>、<span class="mono">5以上</span>）。上限・下限を直接入れることもできます。片側規格は使わない側を空欄に。</div>
+        <div class="tbl-wrap"><table class="spec"><thead><tr><th class="l">解析対象</th><th class="l">図面の表記</th><th>規格上限値（USL）</th><th>規格下限値（LSL）</th><th>データ数</th></tr></thead><tbody id="specBody"></tbody></table></div>
       </div>
     </div>
     <div class="box" id="capOpts" hidden>
@@ -274,6 +322,16 @@ footer a { color: inherit; }
         <label class="btn small">設定を読み込む<input type="file" id="importSettings" accept=".json,application/json" hidden></label>
       </div>
     </div>
+    <details class="box planner" id="planner">
+      <summary><h2 style="display:inline">必要なデータ数の目安</h2><span class="hint">　測定を始める前の計画に</span></summary>
+      <div class="row" style="margin-top:10px">
+        <label class="field"><span class="lbl">見込みの Ppk</span><input type="number" id="pnC" class="num" value="1.67" step="0.01" min="0" style="width:7em"></label>
+        <label class="field"><span class="lbl">示したい値（下限）</span><input type="number" id="pnT" class="num" value="1.33" step="0.01" min="0" style="width:7em"></label>
+        <label class="field"><span class="lbl">信頼区間</span><select id="pnA"><option value="0.10">90%（両側）</option><option value="0.05" selected>95%（両側）</option><option value="0.01">99%（両側）</option></select></label>
+      </div>
+      <div class="plan-out" id="pnOut"></div>
+      <div class="hint">Ppk の信頼区間（Bissell の近似）の下限が「示したい値」以上になる最小のデータ数です。見込みの Ppk が示したい値に近いほど、多くのデータが必要になります。判定を「Ppk の 95% 信頼区間の下限」で行う場合の計画に使えます。</div>
+    </details>
     <div class="box" id="capResult" hidden>
       <h2>解析結果</h2>
       <div class="print-head" id="printHead"></div>
@@ -564,6 +622,13 @@ Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
 <li>判定に使う値（Cpk、Ppk、Ppk の 95% 信頼区間の下限）と、◎・○・△ の基準値は解析オプションで変えられます。初期値は ◎ 1.67、○ 1.33、△ 1.00 です</li>
 <li>データ数が少ないと Cpk・Ppk の推定値はばらつきます。「Ppk の 95% 信頼区間の下限」で判定すると、データ数の少なさによる過大評価を避けられます（n = 30 で Ppk = 1.33 のとき、下限はおよそ 0.97）</li>
 </ul>
+<h3>3.6 必要なデータ数の目安</h3>
+<ul>
+<li>Ppk の推定値は、データ数が少ないほどばらつきます。そこで「Ppk の 95% 信頼区間（Bissell の近似）の下限が基準値以上になるには、何個のデータが要るか」を逆算して表示します</li>
+<li>結果の画面では、今の Ppk がこのまま続くと仮定して、「○ 良好」の基準値（初期値 1.33）に必要な数を出します。今の Ppk が基準値以下なら、データを増やしても下限は届きません</li>
+<li>測定を始める前は「必要なデータ数の目安」の欄で、見込みの Ppk と示したい値から計画できます。95% 信頼区間で 1.33 を示す場合、見込みの Ppk が 1.67 なら 51 個、2.00 なら 20 個、1.50 なら 166 個が目安です</li>
+<li>群内の σ（R̄ / d2）を使う Cp・Cpk は自由度の扱いが異なるため、この計算は Ppk についてのものです</li>
+</ul>
 <hr />
 <h2>4. サブグループサイズとA2係数の関係</h2>
 <h3>4.1 A2係数の役割と算出方法</h3>
@@ -783,6 +848,8 @@ t検定およびF検定を用いて、グループ間の平均値や分散の違
 </main>
 <div class="toast" id="toast" hidden></div>
 <script src="js/stats.js"></script>
+<script src="js/spec.js"></script>
+<script src="js/grid.js"></script>
 <script src="js/xlsx.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/app.js"></script>

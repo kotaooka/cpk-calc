@@ -94,6 +94,17 @@ eq = [list(map(float, rng.normal(20, 0.5, 5))) for _ in range(12)]
 Rb = np.mean([max(g) - min(g) for g in eq]); sb = np.mean([np.std(g, ddof=1) for g in eq]); xb = np.mean([np.mean(g) for g in eq])
 R['equal'] = dict(x=[v for g in eq for v in g], ucl=xb + 0.577 * Rb, lcl=xb - 0.577 * Rb, rcl=Rb, rucl=2.114 * Rb, scl=sb, sucl=2.089 * sb)
 
+# ---- 必要なデータ数（Bissell の下限が目標以上になる最小の n を総当たりで） ----
+def lower(c, n, alpha):
+    z = stats.norm.ppf(1 - alpha / 2)
+    return c * (1 - z * math.sqrt(1 / (9 * n * c * c) + 1 / (2 * (n - 1))))
+R['reqn'] = []
+for c, t, a in [(1.67, 1.33, 0.05), (1.5, 1.33, 0.05), (2.0, 1.33, 0.05), (1.4, 1.33, 0.05), (1.67, 1.0, 0.10), (1.33, 1.33, 0.05), (1.2, 1.33, 0.05), (3.0, 1.67, 0.01)]:
+    n = None
+    if c > t:
+        n = next(k for k in range(2, 10_000_000) if lower(c, k, a) >= t)
+    R['reqn'].append(dict(c=c, t=t, a=a, n=n))
+
 def clean(o):
     if isinstance(o, dict): return {k: clean(v) for k, v in o.items()}
     if isinstance(o, (list, tuple)): return [clean(v) for v in o]
