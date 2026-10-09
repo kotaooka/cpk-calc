@@ -146,6 +146,31 @@ dl.kv dd small { color: var(--ink2); font-size: .74rem; }
 .explain table { min-width: 0; margin: 8px 0; }
 .explain hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 8px 16px; border-radius: 999px; font-size: .88rem; z-index: 20; }
+.paste-hint { margin-top: 10px; font-size: .85rem; }
+.paste-hint .btn { margin-left: 6px; }
+.print-head { display: none; }
+.rulehits { margin: 4px 0 10px; padding: 0; list-style: none; font-size: .82rem; color: var(--warn); }
+select:disabled { opacity: .5; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  :root { --bg: #fff !important; }
+  body { background: #fff; font-size: 11px; }
+  header.top, #dataSec, #capSetup, #capOpts, #testSetup, footer, .no-print, .chart .save, .toast { display: none !important; }
+  .wrap { max-width: none; padding: 0; }
+  .box { border: 0; padding: 0; margin: 0; }
+  .box > h2 { font-size: 14px; }
+  .print-head { display: block; margin-bottom: 8px; font-size: 11px; color: #333; }
+  .print-head h1 { font-size: 16px; margin: 0 0 4px; }
+  .tbl-wrap { overflow: visible; border-color: #999; }
+  .tbl-wrap table { font-size: 9px; min-width: 0; width: 100%; }
+  th, td { position: static; padding: 3px 4px; white-space: normal; }
+  .target { break-before: page; border-top: 0; margin-top: 0; padding-top: 0; }
+  .charts { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .chart { break-inside: avoid; }
+  dl.kv { grid-template-columns: repeat(4, 1fr); }
+  .log li { padding-block: 1px; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 footer { margin-top: 32px; font-size: .78rem; color: var(--muted); }
 footer a { color: inherit; }
 </style>
@@ -175,6 +200,8 @@ footer a { color: inherit; }
         <strong>Excel（.xlsx）または CSV ファイル</strong>をここにドラッグするか、
         <label class="btn small" style="display:inline-block">ファイルを選択<input type="file" id="fileIn" accept=".xlsx,.xlsm,.csv,.tsv,.txt" hidden></label>
         <div class="hint" style="margin-top:6px">旧形式の .xls は読めません。Excel で .xlsx に保存し直してください。</div>
+        <div class="paste-hint"><strong>Excel でコピーした範囲を、このページで Ctrl+V（⌘+V）で貼り付け</strong>ても読み込めます。
+          <button class="btn small" id="pasteBtn" type="button">クリップボードから貼り付け</button></div>
         <div style="margin-top:8px"><button class="btn small" id="sampleBtn" type="button">サンプルデータで試す</button></div>
       </div>
       <div class="privacy">ファイルはブラウザの中だけで処理され、どこにも送信されません。</div>
@@ -189,7 +216,8 @@ footer a { color: inherit; }
           <span class="lbl">計算対象の方向</span>
           <span class="seg" id="dirSeg"><button type="button" data-v="列方向" aria-pressed="true">列方向</button><button type="button" data-v="行方向" aria-pressed="false">行方向</button></span>
         </div>
-        <div class="hint" style="margin-top:4px">チェックしないときは、先頭行を列の名前、先頭列を行の名前として使います。チェックしたときは Excel の列記号（A, B…）・行番号を名前にします。</div>
+        <div class="hint" style="margin-top:4px">チェックしないときは、先頭行を列の名前、先頭列を行の名前として使います。チェックしたときは Excel の列記号（A, B…）・行番号を名前にします。<br>
+          名前が「USL」「LSL」（または「規格上限」「規格下限」「上限」「下限」）の行があれば、規格値として読み込み、データからは除きます（行方向のときは列）。</div>
         <div class="tbl-wrap" id="preview"></div>
         <div class="hint" id="previewNote"></div>
       </div>
@@ -213,20 +241,32 @@ footer a { color: inherit; }
     <div class="box" id="capOpts" hidden>
       <h2><span class="step">3</span>解析オプション</h2>
       <div class="row">
+        <label class="field"><span class="lbl">サブグループの分け方</span><select id="groupBy"><option value="">連続する n 個ずつ</option></select></label>
         <label class="field"><span class="lbl">サブグループサイズ</span>
           <select id="subgroup"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
         <div class="field"><span class="lbl">全体の標準偏差（Pp/Ppk）の計算方法</span>
           <span class="seg" id="stdSeg"><button type="button" data-v="サンプル標準偏差" aria-pressed="true">標本標準偏差（n−1）</button><button type="button" data-v="母集団標準偏差" aria-pressed="false">母集団標準偏差（n）</button></span></div>
       </div>
-      <div class="hint" style="margin-top:6px">サブグループサイズは管理図の種類（1: I-MR、2以上: X̄-R・s）と、Cp/Cpk に使う群内変動 σ の推定（1: MR̄/d2、2以上: R̄/d2）に使います。データは測定（生産）順に並べてください。</div>
+      <div class="hint" style="margin-top:6px">サブグループサイズは管理図の種類（1: I-MR、2以上: X̄-R・s）と、Cp/Cpk に使う群内変動 σ の推定（1: MR̄/d2、2以上: R̄/d2）に使います。データは測定（生産）順に並べてください。<br>
+        ロット番号や日付の列（行方向のときは行）を選ぶと、その値が同じデータを1つのサブグループにします。サイズが揃わなくても計算でき、管理限界はサブグループごとのサイズで変わります。</div>
+      <div class="row" style="margin-top:12px">
+        <label class="field"><span class="lbl">判定に使う値</span><select id="judgeBasis"><option value="Cpk">Cpk（群内変動）</option><option value="Ppk">Ppk（全体変動）</option><option value="PpkLow">Ppk の 95% 信頼区間の下限</option></select></label>
+        <label class="field"><span class="lbl">◎ 非常に良好</span><input type="number" id="thEx" class="num" value="1.67" step="0.01" min="0" style="width:6em"></label>
+        <label class="field"><span class="lbl">○ 良好</span><input type="number" id="thGd" class="num" value="1.33" step="0.01" min="0" style="width:6em"></label>
+        <label class="field"><span class="lbl">△ 要注意</span><input type="number" id="thWa" class="num" value="1.00" step="0.01" min="0" style="width:6em"></label>
+      </div>
+      <div class="hint" style="margin-top:4px">それぞれの値以上で判定します。客先の要求値に合わせて変えてください。データ数が少ないときは「Ppk の 95% 信頼区間の下限」で判定すると、過大評価を避けられます。</div>
       <div class="row" style="margin-top:12px">
         <span class="lbl">出力するグラフ</span>
-        <label class="chk"><input type="checkbox" data-show="hist" checked>ヒストグラム</label>
+        <label class="chk"><input type="checkbox" data-show="hist" checked>工程能力図（ヒストグラム＋分布曲線）</label>
         <label class="chk"><input type="checkbox" data-show="qq" checked>QQプロット</label>
-        <label class="chk"><input type="checkbox" data-show="density" checked>確率密度分布</label>
+        <label class="chk"><input type="checkbox" data-show="density">確率密度分布</label>
         <label class="chk"><input type="checkbox" data-show="xbar" checked>X̄／I 管理図</label>
         <label class="chk"><input type="checkbox" data-show="r" checked>R／MR 管理図</label>
         <label class="chk"><input type="checkbox" data-show="s" checked>s 管理図</label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="chk"><input type="checkbox" id="runRules" checked>管理図の異常判定ルールを使う（JIS Z 9020-2 の 8 ルール。R・MR・s 管理図は管理限界外のみ）</label>
       </div>
       <div class="row" style="margin-top:16px">
         <button class="btn primary" id="runCap" type="button">解析する</button>
@@ -236,12 +276,13 @@ footer a { color: inherit; }
     </div>
     <div class="box" id="capResult" hidden>
       <h2>解析結果</h2>
-      <div class="row" style="justify-content:space-between">
-        <span class="hint">判定は Cpk で行い、Cpk を計算できないときは Ppk で判定します。</span>
-        <button class="btn small" id="dlCap" type="button">結果を Excel で保存</button>
+      <div class="print-head" id="printHead"></div>
+      <div class="row no-print" style="justify-content:space-between">
+        <span class="hint" id="judgeNote"></span>
+        <span class="row"><button class="btn small" id="printCap" type="button">印刷・PDF で保存</button><button class="btn small" id="dlCap" type="button">結果を Excel で保存</button></span>
       </div>
       <div class="tbl-wrap" id="summary"></div>
-      <div class="legend"><span class="lv ex">◎ 1.67 以上</span><span class="lv gd">○ 1.33 以上</span><span class="lv wa">△ 1.00 以上</span><span class="lv ng">✕ 1.00 未満</span></div>
+      <div class="legend" id="legend"></div>
       <ul class="log" id="capLog"></ul>
       <div id="capDetail"></div>
     </div>
@@ -273,7 +314,7 @@ footer a { color: inherit; }
     </div>
     <div class="box" id="testResult" hidden>
       <h2>検定結果</h2>
-      <div class="row" style="justify-content:flex-end"><button class="btn small" id="dlTest" type="button">結果を Excel で保存</button></div>
+      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printTest" type="button">印刷・PDF で保存</button><button class="btn small" id="dlTest" type="button">結果を Excel で保存</button></div>
       <div class="res-grid" id="testCards" style="margin-top:8px"></div>
       <ul class="log" id="testLog"></ul>
       <div class="charts" id="testCharts" style="margin-top:12px"></div>
@@ -332,6 +373,8 @@ footer a { color: inherit; }
 <li>右裾または左裾の伸び具合で分布の非対称性を示すか</li>
 </ul>
 </li>
+<li><strong>工程能力図</strong>:<br />
+    本ツールのヒストグラムには、規格線（USL・LSL）と、平均と σ から描いた正規分布の曲線を2本重ねています。実線は全データの σ（Pp・Ppk に対応）、破線は群内の σ（Cp・Cpk に対応）です。2本の幅が大きく違うときは、サブグループ間の変動が大きいことを示します。</li>
 </ul>
 <h3>2.2 QQプロット</h3>
 <ul>
@@ -412,6 +455,55 @@ footer a { color: inherit; }
     管理限界との比較により、ばらつきが一定かどうかを評価します。<br />
     大きな変動があれば工程の改善点となります。</li>
 </ul>
+<h3>2.7 管理図の異常判定ルール</h3>
+<p>管理限界の内側にあっても、点の並び方に偏りがあれば工程に異常な原因がある可能性があります。本ツールは JIS Z 9020-2（ISO 7870-2）の 8 つのルールで X̄ 管理図・I 管理図を判定します。R・MR・s 管理図は管理限界外（ルール 1）だけを判定します。</p>
+<p>中心線からの距離を、打点する統計量の標準偏差 σ（管理限界までの 1/3）で測り、±1σ 以内を領域 C、1〜2σ を領域 B、2〜3σ を領域 A とします。</p>
+<table>
+<thead>
+<tr>
+<th>ルール</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1 点が管理限界の外（領域 A を超える）</td>
+</tr>
+<tr>
+<td>2</td>
+<td>連続 9 点が中心線の片側</td>
+</tr>
+<tr>
+<td>3</td>
+<td>連続 6 点が増加または減少し続ける</td>
+</tr>
+<tr>
+<td>4</td>
+<td>連続 14 点が交互に増減する</td>
+</tr>
+<tr>
+<td>5</td>
+<td>連続 3 点中 2 点が領域 A 以上（同じ側）</td>
+</tr>
+<tr>
+<td>6</td>
+<td>連続 5 点中 4 点が領域 B 以上（同じ側）</td>
+</tr>
+<tr>
+<td>7</td>
+<td>連続 15 点が領域 C（中心線 ±1σ 以内）</td>
+</tr>
+<tr>
+<td>8</td>
+<td>連続 8 点が領域 C の外（中心線の両側）</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>図では、ルール 1 に当たった点を赤、ほかのルールが成立した点（並びの最後の点）を橙で示し、当たったルールと点の範囲を一覧に出します</li>
+<li>使うルールが多いほど、異常がないのに異常と判定する誤り（第1種の誤り）も増えます。当たったルールは、現場で原因を調べるきっかけとして扱ってください</li>
+</ul>
 <hr />
 <h2>3. 工程能力指数（Cp, Cpk, Pp, Ppk）と不良率の関係</h2>
 <h3>3.1 Cp・Cpk と Pp・Ppk の違い（使う σ が違う）</h3>
@@ -458,6 +550,19 @@ Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
 <code>不良率 = 1 - Φ(3) ≈ 0.135%</code>  </li>
 </ul>
 </li>
+</ul>
+<h3>3.4 推定不良率（ppm）と実測の規格外れ</h3>
+<ul>
+<li><strong>推定不良率</strong>：データが正規分布に従うと仮定し、平均と σ から規格を外れる割合を百万分率（ppm）で求めます。<br />
+<code>上側 = 1 - Φ((USL - 平均) / σ)</code>、<code>下側 = Φ((LSL - 平均) / σ)</code><br />
+    σ に群内の σ を使った値（群内、Cpk に対応）と、全データの σ を使った値（全体、Ppk に対応）を並べて表示します。実際に出てくる不良に近いのは「全体」です</li>
+<li><strong>規格外れ（実測）</strong>：データの中で実際に規格を外れた個数です</li>
+<li>正規分布でないデータでは推定不良率が大きくずれます。Shapiro-Wilk 検定の p 値と QQ プロットで確認してください</li>
+</ul>
+<h3>3.5 判定の基準</h3>
+<ul>
+<li>判定に使う値（Cpk、Ppk、Ppk の 95% 信頼区間の下限）と、◎・○・△ の基準値は解析オプションで変えられます。初期値は ◎ 1.67、○ 1.33、△ 1.00 です</li>
+<li>データ数が少ないと Cpk・Ppk の推定値はばらつきます。「Ppk の 95% 信頼区間の下限」で判定すると、データ数の少なさによる過大評価を避けられます（n = 30 で Ppk = 1.33 のとき、下限はおよそ 0.97）</li>
 </ul>
 <hr />
 <h2>4. サブグループサイズとA2係数の関係</h2>
@@ -522,6 +627,12 @@ Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
     サブグループの平均が安定するため、A2係数は低下し、管理限界が狭くなります。</li>
 <li><strong>実務上の注意</strong>:<br />
     適切なサブグループサイズの選択は、偽陽性の警報を防ぎ、実際の工程異常を正確に捉えるうえで重要です。</li>
+</ul>
+<h3>4.4 列の値でサブグループを分ける</h3>
+<ul>
+<li>ロット番号や日付の列を「サブグループの分け方」で選ぶと、その値が同じデータを1つのサブグループにします（最初に出てきた順に並べます）</li>
+<li>サブグループのサイズが揃っていないときは、σ(群内) を各サブグループの R / d2(n) の平均で求め、管理限界はサブグループごとのサイズで計算します（図では階段状になります）。サイズが揃っていれば通常の R̄ / d2、A2・D3・D4・B3・B4 による計算と同じ結果です</li>
+<li>係数表のあるサイズ 2〜10 のサブグループだけを使います。サイズ 1 や 11 以上のサブグループは σ(群内) の推定と管理図から除き、計算ログに件数を出します（Pp・Ppk には含めます）</li>
 </ul>
 <hr />
 <h2>5. t検定/F検定</h2>

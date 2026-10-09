@@ -4,6 +4,7 @@ const S = require('../js/stats.js');
 const R = require('./reference.json');
 
 let n = 0; const fails = [];
+function same(name, got, exp) { n++; if (got !== exp) fails.push(`${name}: 計算 ${got} / 期待 ${exp}`); }
 function check(name, got, exp, tol = 1e-10) {
   n++;
   const ok = got === exp || (got == null && exp == null) ||
@@ -50,6 +51,48 @@ for (const c of R.cap) {
   check(`${tag} Pp`, r.Pp, c.Pp, 1e-12); check(`${tag} Ppk`, r.Ppk, c.Ppk, 1e-12);
   check(`${tag} Ppk下限`, r.PpkCI[0], c.PpkCI[0], 1e-10); check(`${tag} Ppk上限`, r.PpkCI[1], c.PpkCI[1], 1e-10);
   check(`${tag} Pp下限`, r.PpCI[0], c.PpCI[0], 1e-10); check(`${tag} Pp上限`, r.PpCI[1], c.PpCI[1], 1e-10);
+}
+
+// 不良率（ppm）
+for (const r of R.ppm) {
+  const e = S.expectedPpm(r.mu, r.sig, r.usl, r.lsl);
+  check(`ppm 上側 μ=${r.mu}`, e.upper, r.upper, 1e-9); check(`ppm 下側 μ=${r.mu}`, e.lower, r.lower, 1e-9);
+  check(`ppm 合計 μ=${r.mu}`, e.total, (r.upper || 0) + (r.lower || 0), 1e-9);
+}
+const ob = S.observedOut([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 8.5, 1.5);
+check('規格外れの個数 上側', ob.upper, 2); check('規格外れの個数 下側', ob.lower, 1); check('規格外れ ppm', ob.ppm, 300000);
+// サイズが揃わないサブグループ（サイズ 1 と 11 の組は除外される）
+{
+  const G = R.groups, w = S.sigmaFromGroups(G.groups);
+  check('可変サブグループ σ(群内)', w.sigma, G.sigma, 1e-12); check('可変サブグループ 除外数', w.excluded, 2);
+  const cc = S.controlCharts(null, 0, G.groups);
+  check('可変サブグループ 中心線', cc.main.cl[0], G.xbb, 1e-12);
+  G.ucl.forEach((v, i) => check(`可変 X̄ UCL ${i}`, cc.main.ucl[i], v, 1e-12));
+  G.rucl.forEach((v, i) => check(`可変 R UCL ${i}`, cc.range.ucl[i], v, 1e-12));
+  G.scl.forEach((v, i) => check(`可変 s CL ${i}`, cc.s.cl[i], v, 1e-12));
+  G.sucl.forEach((v, i) => check(`可変 s UCL ${i}`, cc.s.ucl[i], v, 1e-12));
+  const capG = S.capability(G.groups.flat(), 22, 18, 5, 1, 0.05, G.groups);
+  check('可変サブグループ Cpk の σ', capG.sigmaWithin, G.sigma, 1e-12);
+}
+{
+  const E = R.equal, cc = S.controlCharts(E.x, 5);
+  check('X̄ UCL = X̄̄ + A2·R̄', cc.main.ucl[0], E.ucl, 1e-12); check('X̄ LCL', cc.main.lcl[3], E.lcl, 1e-12);
+  check('R CL = R̄', cc.range.cl[0], E.rcl, 1e-12); check('R UCL = D4·R̄', cc.range.ucl[5], E.rucl, 1e-12);
+  check('s CL = s̄', cc.s.cl[0], E.scl, 1e-12); check('s UCL = B4·s̄', cc.s.ucl[2], E.sucl, 1e-12);
+}
+// 異常判定ルール：σ=1、中心線 0、管理限界 ±3 の図で、ルールごとに作った並びを判定する
+{
+  const chart = pts => ({ points: pts, cl: pts.map(() => 0), sigma: pts.map(() => 1), ucl: pts.map(() => 3), lcl: pts.map(() => -3) });
+  const rules = pts => S.runRules(chart(pts)).map(h => `${h.rule}:${h.from}-${h.to}`).join(' ');
+  same('ルール1', rules([0.2, -0.3, 3.4, 0.1, -3.2]), '1:2-2 1:4-4');
+  same('ルール2', rules([-0.2, 0.3, 0.5, 0.2, 0.4, 0.6, 0.1, 0.3, 0.2, 0.5, -0.1]), '2:1-9');
+  same('ルール3', rules([0.1, -0.5, -0.2, 0.0, 0.3, 0.5, 0.8, -0.4]), '3:1-6');
+  same('ルール4', rules(Array.from({ length: 14 }, (_, i) => (i % 2 ? 0.4 : -0.4) * (1 + i * 0.01))), '4:0-13');
+  same('ルール5', rules([0.1, 2.3, -0.4, 2.5, 0.2]), '5:1-3');
+  same('ルール6', rules([1.2, 1.5, -0.3, 1.1, 1.8, -0.2]), '6:0-4');
+  same('ルール7', rules(Array.from({ length: 15 }, (_, i) => [0.3, 0.5, -0.2, 0.4, -0.6, 0.1, -0.3, 0.2, 0.7, -0.1, 0.6, -0.4, 0.2, -0.5, 0.35][i])), '7:0-14');
+  same('ルール8', rules([1.5, -1.6, 1.4, 1.7, -1.3, 1.2, -1.8, 1.5]), '8:0-7');
+  same('当たらない並び', rules([0.5, -0.4, 0.3, 1.2, -0.8, 0.1, -1.1, 0.6]), '');
 }
 
 // d2 係数を数値積分で求め直す：d2(n) = ∫ [1 - (1-Φ)^n - Φ^n] dx

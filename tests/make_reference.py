@@ -72,6 +72,28 @@ for m in (1, 2, 3, 5, 8, 10):
             R['cap'].append(dict(m=m, usl=usl, lsl=lsl, ddof=ddof, **cap(x, usl, lsl, m, ddof)))
 R['capx'] = list(map(float, x))
 
+# ---- 不良率（ppm）と、サイズが揃わないサブグループ ----
+R['ppm'] = []
+for mu, sig, usl, lsl in [(10, 0.02, 10.08, 9.94), (10.01, 0.03, 10.08, None), (0.5, 0.29, None, -0.3), (5, 1, 9, 1)]:
+    R['ppm'].append(dict(mu=mu, sig=sig, usl=usl, lsl=lsl,
+                         upper=None if usl is None else stats.norm.sf((usl - mu) / sig) * 1e6,
+                         lower=None if lsl is None else stats.norm.cdf((lsl - mu) / sig) * 1e6))
+F = {2: (1.880, 0.000, 3.267, 0.000, 3.267, 0.7979), 3: (1.023, 0.000, 2.574, 0.000, 2.568, 0.8862), 4: (0.729, 0.000, 2.282, 0.000, 2.266, 0.9213),
+     5: (0.577, 0.000, 2.114, 0.000, 2.089, 0.9400), 6: (0.483, 0.000, 2.004, 0.030, 1.970, 0.9515)}  # A2, D3, D4, B3, B4, c4
+sizes = [5, 3, 4, 5, 2, 6, 5, 1, 4, 3, 11]
+groups = [list(map(float, rng.normal(20, 0.5, k))) for k in sizes]
+use = [g for g in groups if 2 <= len(g) <= 10]
+sigR = np.mean([(max(g) - min(g)) / D2[len(g)] for g in use])
+sigS = np.mean([np.std(g, ddof=1) / F[len(g)][5] for g in use])
+xbb = np.mean(np.concatenate(use))
+R['groups'] = dict(groups=groups, sigma=sigR, xbb=xbb,
+                   ucl=[xbb + F[len(g)][0] * D2[len(g)] * sigR for g in use], rucl=[F[len(g)][2] * D2[len(g)] * sigR for g in use],
+                   scl=[F[len(g)][5] * sigS for g in use], sucl=[F[len(g)][4] * F[len(g)][5] * sigS for g in use])
+# サイズが揃っているときは、教科書どおりの A2·R̄、D4·R̄、B4·s̄ になること
+eq = [list(map(float, rng.normal(20, 0.5, 5))) for _ in range(12)]
+Rb = np.mean([max(g) - min(g) for g in eq]); sb = np.mean([np.std(g, ddof=1) for g in eq]); xb = np.mean([np.mean(g) for g in eq])
+R['equal'] = dict(x=[v for g in eq for v in g], ucl=xb + 0.577 * Rb, lcl=xb - 0.577 * Rb, rcl=Rb, rucl=2.114 * Rb, scl=sb, sucl=2.089 * sb)
+
 def clean(o):
     if isinstance(o, dict): return {k: clean(v) for k, v in o.items()}
     if isinstance(o, (list, tuple)): return [clean(v) for v in o]

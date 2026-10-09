@@ -55,7 +55,7 @@
     const vlabels = [];
     for (const L of opt.layers) {
       const col = L.color || 'var(--s1)', dash = L.dash ? ` stroke-dasharray="${L.dash}"` : '';
-      if (L.label && L.type !== 'vline' && L.type !== 'hline') legend.push([L.label, col, L.type]);
+      if (L.label && L.type !== 'vline' && L.type !== 'hline') legend.push([L.label, col, L.type, L.dash]);
       if (L.type === 'bars') {
         for (const b of L.data) s += `<rect x="${X(b.x0) + 0.5}" y="${Y(b.h)}" width="${Math.max(0, X(b.x1) - X(b.x0) - 1)}" height="${Math.max(0, Y(y0 > 0 ? y0 : 0) - Y(b.h))}" fill="${col}" fill-opacity=".55" stroke="${col}"/>`;
       } else if (L.type === 'line' || L.type === 'area') {
@@ -83,15 +83,27 @@
       rowsEnd[row] = x0 + w;
       s += `<text x="${right ? v.x - 4 : v.x + 4}" y="${M.t + 13 + row * 14}" font-size="11" text-anchor="${right ? 'end' : 'start'}" fill="${v.col}" paint-order="stroke" stroke="var(--surface)" stroke-width="3">${esc(v.text)}</text>`;
     }
-    // 凡例（右上）
+    // 凡例：入るならタイトルの行の右側に横並びで（グラフ内の線やラベルと重ならない）。入らなければ右上に枠つきで
+    const textW = t => [...t].reduce((a, ch) => a + (ch.charCodeAt(0) > 255 ? 11.5 : 6.5), 0);
     if (opt.legend !== false && legend.length) {
+      const items0 = legend.map(([t, c, ty, dash]) => ({ t, c, ty, dash, w: 24 + textW(t) + 12 }));
+      const total = items0.reduce((a, i) => a + i.w, 0), titleW = opt.title ? textW(opt.title) * 14 / 11.5 + 20 : 0;
+      if (M.l + titleW + total <= W - M.r) {
+        let x = W - M.r - total;
+        for (const it of items0) {
+          s += it.ty === 'points' ? `<circle cx="${x + 9}" cy="16" r="3.5" fill="${it.c}"/>` : `<line x1="${x + 1}" x2="${x + 17}" y1="16" y2="16" stroke="${it.c}" stroke-width="${it.ty === 'bars' ? 8 : 2.5}"${it.ty === 'bars' ? ' stroke-opacity=".55"' : ''}${it.dash ? ` stroke-dasharray="${it.dash}"` : ''}/>`;
+          s += `<text x="${x + 22}" y="20" font-size="11" fill="var(--ink2)">${esc(it.t)}</text>`;
+          x += it.w;
+        }
+        return resolveVars(s + '</svg>');
+      }
       let lx = W - M.r - 8, ly = M.t + 8;
-      const items = legend.map(([t, c, ty]) => ({ t, c, ty, w: 26 + t.length * 11.5 }));
+      const items = legend.map(([t, c, ty, dash]) => ({ t, c, ty, dash, w: 26 + textW(t) }));
       const bw = Math.max(...items.map(i => i.w)) + 8;
       s += `<rect x="${lx - bw}" y="${ly - 4}" width="${bw}" height="${items.length * 17 + 6}" fill="var(--surface)" fill-opacity=".85" stroke="var(--line)" rx="4"/>`;
       items.forEach((it, i) => {
         const yy = ly + 9 + i * 17;
-        s += it.ty === 'points' ? `<circle cx="${lx - bw + 14}" cy="${yy}" r="3.5" fill="${it.c}"/>` : `<line x1="${lx - bw + 6}" x2="${lx - bw + 22}" y1="${yy}" y2="${yy}" stroke="${it.c}" stroke-width="${it.ty === 'bars' ? 8 : 2.5}"${it.ty === 'bars' ? ' stroke-opacity=".55"' : ''}/>`;
+        s += it.ty === 'points' ? `<circle cx="${lx - bw + 14}" cy="${yy}" r="3.5" fill="${it.c}"/>` : `<line x1="${lx - bw + 6}" x2="${lx - bw + 22}" y1="${yy}" y2="${yy}" stroke="${it.c}" stroke-width="${it.ty === 'bars' ? 8 : 2.5}"${it.ty === 'bars' ? ' stroke-opacity=".55"' : ''}${it.dash ? ` stroke-dasharray="${it.dash}"` : ''}/>`;
         s += `<text x="${lx - bw + 28}" y="${yy + 4}" font-size="11" fill="var(--ink2)">${esc(it.t)}</text>`;
       });
     }

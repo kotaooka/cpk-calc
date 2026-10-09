@@ -354,6 +354,25 @@
   const factor = (n, name) => FACTORS[n]['A2 A3 D3 D4 B3 B4 c4 d2'.split(' ').indexOf(name)];
   const RECOMMENDED_SUBGROUPS = 25;
 
+  // ---- サブグループ ----
+  // 連続する m 個ずつに区切る（端数は捨てる）
+  function consecutiveGroups(x, m) {
+    const k = Math.floor(x.length / m), groups = [];
+    for (let g = 0; g < k; g++) groups.push(x.slice(g * m, (g + 1) * m));
+    return { groups, left: x.length - k * m };
+  }
+  // サブグループから群内変動を推定する。サイズが揃っていれば R̄/d2、
+  // 揃っていなければ各サブグループの R/d2(n) の平均（それぞれ σ の不偏推定なので平均も不偏）
+  // 係数表のある 2〜10 個のサブグループだけを使う
+  function sigmaFromGroups(groups) {
+    const use = groups.filter(g => FACTORS[g.length]);
+    const excluded = groups.length - use.length;
+    if (use.length < 2) return { sigma: null, reason: `サイズ 2〜10 のサブグループが ${use.length} 組しかないため群内変動を推定できません（2組以上必要）`, k: use.length, excluded };
+    let s = 0;
+    for (const g of use) s += (Math.max(...g) - Math.min(...g)) / factor(g.length, 'd2');
+    const sizes = use.map(g => g.length), lo = Math.min(...sizes), hi = Math.max(...sizes);
+    return { sigma: s / use.length, method: lo === hi ? `R̄/d2（n=${lo}）` : `R/d2 の平均（n=${lo}〜${hi}）`, k: use.length, excluded };
+  }
   function sigmaWithin(x, m) {
     if (m === 1) {
       if (x.length < 2) return { sigma: null, reason: 'データが2点未満のため移動範囲を計算できません', k: 0 };
@@ -362,14 +381,9 @@
       return { sigma: s / (x.length - 1) / factor(2, 'd2'), method: 'MR̄/d2（移動範囲 n=2）', k: x.length - 1 };
     }
     if (!FACTORS[m]) return { sigma: null, reason: `サブグループサイズ ${m} の係数がありません`, k: 0 };
-    const k = Math.floor(x.length / m);
-    if (k < 2) return { sigma: null, reason: `完全なサブグループが ${k} 組しかないため群内変動を推定できません（2組以上必要）`, k };
-    let r = 0;
-    for (let g = 0; g < k; g++) {
-      const grp = x.slice(g * m, (g + 1) * m);
-      r += Math.max(...grp) - Math.min(...grp);
-    }
-    return { sigma: r / k / factor(m, 'd2'), method: `R̄/d2（n=${m}）`, k };
+    const { groups } = consecutiveGroups(x, m);
+    if (groups.length < 2) return { sigma: null, reason: `完全なサブグループが ${groups.length} 組しかないため群内変動を推定できません（2組以上必要）`, k: groups.length };
+    return sigmaFromGroups(groups);
   }
   function indices(mu, sigma, usl, lsl) {
     if (!(sigma > 0)) return [null, null, null, null];
@@ -392,14 +406,31 @@
     const a = c * (1 - z * se), b = c * (1 + z * se);
     return [Math.min(a, b), Math.max(a, b)];
   }
-  function capability(x, usl, lsl, m, ddof = 1, alpha = 0.05) {
+  // 規格外れの割合（ppm）。正規分布を仮定した推定値
+  function expectedPpm(mu, sigma, usl, lsl) {
+    if (!(sigma > 0)) return null;
+    const upper = usl != null ? normSf((usl - mu) / sigma) * 1e6 : null;
+    const lower = lsl != null ? normCdf((lsl - mu) / sigma) * 1e6 : null;
+    return { upper, lower, total: (upper || 0) + (lower || 0) };
+  }
+  // 実際に規格を外れた個数と ppm
+  function observedOut(x, usl, lsl) {
+    const upper = usl != null ? x.filter(v => v > usl).length : null;
+    const lower = lsl != null ? x.filter(v => v < lsl).length : null;
+    return { upper, lower, total: (upper || 0) + (lower || 0), ppm: ((upper || 0) + (lower || 0)) / x.length * 1e6 };
+  }
+  // groups を渡すとそのサブグループで群内変動を推定する（列の値でサブグループを分けるとき）。x は全データ
+  function capability(x, usl, lsl, m, ddof = 1, alpha = 0.05, groups = null) {
     const n = x.length, notes = [];
     const mu = mean(x), s = sd(x, ddof);
-    const w = sigmaWithin(x, m);
+    const w = groups ? sigmaFromGroups(groups) : sigmaWithin(x, m);
     let sw = w.sigma;
     if (sw == null) notes.push(`Cp/Cpk を計算できません: ${w.reason}`);
     else {
-      if (m >= 2) {
+      if (groups) {
+        if (w.excluded) notes.push(`サイズが 2〜10 でないサブグループ ${w.excluded} 組は σ(群内) の推定から除外しました`);
+        if (w.k < RECOMMENDED_SUBGROUPS) notes.push(`サブグループ数が ${w.k} 組です（工程能力の調査では ${RECOMMENDED_SUBGROUPS} 組程度が目安）`);
+      } else if (m >= 2) {
         const left = n - w.k * m;
         if (left) notes.push(`サブグループに満たない末尾 ${left} 点は σ(群内) の推定から除外しました`);
         if (w.k < RECOMMENDED_SUBGROUPS) notes.push(`サブグループ数が ${w.k} 組です（工程能力の調査では ${RECOMMENDED_SUBGROUPS} 組程度が目安）`);
@@ -412,40 +443,92 @@
       notes.push('Cpk が Ppk を大きく上回っています。サブグループ間の変動（平均のずれ・ドリフト）が大きく、工程が統計的管理状態にない可能性があります。管理図を確認してください');
     return {
       n, mean: mu, sigmaWithin: sw, sigmaWithinMethod: sw != null ? w.method : null, subgroups: w.k, sigmaOverall: s,
-      Cp, Cpk, Cpu, Cpl, Pp, Ppk, Ppu, Ppl, PpCI: cpCI(Pp, n, alpha), PpkCI: cpkCI(Ppk, n, alpha), notes,
+      Cp, Cpk, Cpu, Cpl, Pp, Ppk, Ppu, Ppl, PpCI: cpCI(Pp, n, alpha), PpkCI: cpkCI(Ppk, n, alpha),
+      ppmWithin: expectedPpm(mu, sw, usl, lsl), ppmOverall: expectedPpm(mu, s, usl, lsl), observed: observedOut(x, usl, lsl), notes,
     };
   }
 
-  // 管理図の中心線と管理限界
-  function controlCharts(x, m) {
-    if (m === 1) {
+  // ---- 管理図 ----
+  // 戻り値の各図は { points, start, cl, ucl, lcl, sigma }。cl・ucl・lcl・sigma は点ごとの配列（サイズが揃わないとき管理限界が点ごとに変わる）
+  // sigma は打点する統計量の標準偏差（異常判定ルールの領域 A/B/C に使う）
+  const fill = (n, v) => new Array(n).fill(v);
+  function controlCharts(x, m, groupsIn = null) {
+    if (!groupsIn && m === 1) {
       if (x.length < 2) return null;
       const mr = []; for (let i = 1; i < x.length; i++) mr.push(Math.abs(x[i] - x[i - 1]));
       const cl = mean(x), mrBar = mean(mr), sig = mrBar / factor(2, 'd2');
       return {
         type: 'I-MR',
-        main: { points: x, cl, ucl: cl + 3 * sig, lcl: cl - 3 * sig },
-        range: { points: mr, start: 2, cl: mrBar, ucl: mrBar * factor(2, 'D4'), lcl: 0 },
+        main: { points: x, start: 1, cl: fill(x.length, cl), ucl: fill(x.length, cl + 3 * sig), lcl: fill(x.length, cl - 3 * sig), sigma: fill(x.length, sig) },
+        range: { points: mr, start: 2, cl: fill(mr.length, mrBar), ucl: fill(mr.length, mrBar * factor(2, 'D4')), lcl: fill(mr.length, 0) },
       };
     }
-    const k = Math.floor(x.length / m);
-    if (k < 1) return null;
-    const groups = []; for (let g = 0; g < k; g++) groups.push(x.slice(g * m, (g + 1) * m));
-    const means = groups.map(mean), ranges = groups.map(g => Math.max(...g) - Math.min(...g)), sds = groups.map(g => sd(g));
-    const xbb = mean(means), rBar = mean(ranges), sBar = mean(sds);
+    const all = groupsIn || consecutiveGroups(x, m).groups;
+    const idx = [], groups = [];
+    all.forEach((g, i) => { if (FACTORS[g.length]) { groups.push(g); idx.push(i); } });
+    if (!groups.length) return null;
+    const ns = groups.map(g => g.length);
+    const f = name => ns.map(n => factor(n, name));
+    const d2 = f('d2'), c4 = f('c4');
+    const ranges = groups.map(g => Math.max(...g) - Math.min(...g)), sds = groups.map(g => sd(g));
+    // サイズが揃っていれば σR = R̄/d2、σS = s̄/c4 になり、通常の X̄-R・s 管理図と同じ管理限界になる
+    const sigR = mean(ranges.map((r, i) => r / d2[i])), sigS = mean(sds.map((s, i) => s / c4[i]));
+    const xbb = mean(groups.flat());
+    const A2 = f('A2'), D3 = f('D3'), D4 = f('D4'), B3 = f('B3'), B4 = f('B4');
     return {
-      type: 'Xbar-R', k,
-      main: { points: means, cl: xbb, ucl: xbb + factor(m, 'A2') * rBar, lcl: xbb - factor(m, 'A2') * rBar },
-      range: { points: ranges, start: 1, cl: rBar, ucl: factor(m, 'D4') * rBar, lcl: factor(m, 'D3') * rBar },
-      s: { points: sds, start: 1, cl: sBar, ucl: factor(m, 'B4') * sBar, lcl: factor(m, 'B3') * sBar },
+      type: 'Xbar-R', k: groups.length, groupIndex: idx, sizes: ns,
+      main: { points: groups.map(mean), start: 1, cl: fill(groups.length, xbb), ucl: A2.map((a, i) => xbb + a * d2[i] * sigR), lcl: A2.map((a, i) => xbb - a * d2[i] * sigR), sigma: A2.map((a, i) => a * d2[i] * sigR / 3) },
+      range: { points: ranges, start: 1, cl: d2.map(d => d * sigR), ucl: D4.map((v, i) => v * d2[i] * sigR), lcl: D3.map((v, i) => v * d2[i] * sigR) },
+      s: { points: sds, start: 1, cl: c4.map(c => c * sigS), ucl: B4.map((v, i) => v * c4[i] * sigS), lcl: B3.map((v, i) => v * c4[i] * sigS) },
     };
+  }
+
+  // 管理図の異常判定ルール（JIS Z 9020-2 / ISO 7870-2 の 8 つのルール。Nelson のルールと同じ）
+  // z = (点 − 中心線) / σ。領域 C: |z| < 1、B: 1〜2、A: 2〜3
+  const RULES = {
+    1: '管理限界の外（領域 A を超える）',
+    2: '連続 9 点が中心線の片側',
+    3: '連続 6 点が増加または減少',
+    4: '連続 14 点が交互に増減',
+    5: '連続 3 点中 2 点が領域 A 以上（同じ側）',
+    6: '連続 5 点中 4 点が領域 B 以上（同じ側）',
+    7: '連続 15 点が領域 C（中心線 ±1σ 以内）',
+    8: '連続 8 点が領域 C の外（両側）',
+  };
+  // 戻り値: [{ rule, from, to, points: [番号...] }]（番号は 0 始まり。連続して当てはまる検出は 1 件にまとめる）
+  function runRules(c, rules = [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const p = c.points, n = p.length;
+    const z = p.map((v, i) => (v - c.cl[i]) / c.sigma[i]);
+    const hits = {}; // rule -> Set(該当する点)
+    const mark = (r, from, to) => { (hits[r] = hits[r] || []).push([from, to]); };
+    const want = new Set(rules);
+    for (let i = 0; i < n; i++) {
+      if (want.has(1) && (p[i] > c.ucl[i] + 1e-12 || p[i] < c.lcl[i] - 1e-12)) mark(1, i, i);
+      const win = (len, test) => i >= len - 1 && test(i - len + 1);
+      if (want.has(2) && win(9, s => z.slice(s, i + 1).every(v => v > 0) || z.slice(s, i + 1).every(v => v < 0))) mark(2, i - 8, i);
+      if (want.has(3) && win(6, s => { const d = []; for (let j = s + 1; j <= i; j++) d.push(p[j] - p[j - 1]); return d.every(v => v > 0) || d.every(v => v < 0); })) mark(3, i - 5, i);
+      if (want.has(4) && win(14, s => { for (let j = s + 2; j <= i; j++) { const a = p[j - 1] - p[j - 2], b = p[j] - p[j - 1]; if (!(a * b < 0)) return false; } return true; })) mark(4, i - 13, i);
+      if (want.has(5) && win(3, s => [1, -1].some(sg => z.slice(s, i + 1).filter(v => v * sg > 2).length >= 2))) mark(5, i - 2, i);
+      if (want.has(6) && win(5, s => [1, -1].some(sg => z.slice(s, i + 1).filter(v => v * sg > 1).length >= 4))) mark(6, i - 4, i);
+      if (want.has(7) && win(15, s => z.slice(s, i + 1).every(v => Math.abs(v) < 1))) mark(7, i - 14, i);
+      if (want.has(8) && win(8, s => z.slice(s, i + 1).every(v => Math.abs(v) > 1))) mark(8, i - 7, i);
+    }
+    const out = [];
+    for (const r of Object.keys(hits).map(Number).sort((a, b) => a - b)) {
+      // 重なる検出をまとめる（ルール 1 は隣り合う点もまとめる）
+      // ends はルールが成立した点（並びの最後の点）。図ではこの点に印を付ける
+      const spans = hits[r].sort((a, b) => a[0] - b[0]), merged = [];
+      for (const s of spans) { const last = merged[merged.length - 1]; if (last && s[0] <= last[1] + (r === 1 ? 1 : 0)) { last[1] = Math.max(last[1], s[1]); last[2].push(s[1]); } else merged.push([s[0], s[1], [s[1]]]); }
+      for (const [from, to, ends] of merged) out.push({ rule: r, text: RULES[r], from, to, ends });
+    }
+    return out;
   }
 
   const api = {
     lgamma, ibeta, gammaP, gammaQ, erfc, normCdf, normSf, normPdf, normPpf, chi2Cdf, chi2Ppf,
     tCdf, tSf, tPdf, tPpf, fCdf, fSf, fPdf, fPpf,
     sum, mean, variance, sd, skewness, kurtosis, shapiro, fTest, tTest, correlation,
-    FACTORS, factor, sigmaWithin, capability, controlCharts, cpCI, cpkCI, RECOMMENDED_SUBGROUPS,
+    FACTORS, factor, sigmaWithin, sigmaFromGroups, consecutiveGroups, capability, controlCharts, cpCI, cpkCI, expectedPpm, observedOut, runRules, RULES, RECOMMENDED_SUBGROUPS,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CpkStats = api;
