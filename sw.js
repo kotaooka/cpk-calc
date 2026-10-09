@@ -1,6 +1,6 @@
 // 工程能力解析の Service Worker
 // 公開ファイルを更新したら VERSION を上げる。古いキャッシュは activate 時に削除される
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.1';
 const APP_CACHE = `cpk-calc-${VERSION}`;
 const FONT_CACHE = 'cpk-calc-fonts';
 
@@ -70,15 +70,17 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // JS・アイコンなど: キャッシュを先に返し、裏で最新版を取得して差し替える
+  // JS・アイコンなど: ページ本体と同じくネットワークを優先し、オフライン時だけキャッシュを返す
+  // （キャッシュを先に返すと、更新直後に新しい index.html と古い JS が組み合わさり、ボタンが動かないことがある）
   event.respondWith(
     caches.open(APP_CACHE).then(async c => {
-      const hit = await c.match(req, { ignoreSearch: true });
-      const update = fetch(req).then(res => {
+      try {
+        const res = await fetch(req, { cache: 'no-cache' });
         if (res.ok) c.put(req, res.clone());
         return res;
-      }).catch(() => null);
-      return hit || (await update) || new Response('', { status: 504 });
+      } catch (e) {
+        return (await c.match(req, { ignoreSearch: true })) || new Response('', { status: 504 });
+      }
     })
   );
 });
