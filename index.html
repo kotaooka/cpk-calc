@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>工程能力解析</title>
+<meta name="description" content="Excel の測定データから Cp・Cpk・Pp・Ppk、管理図、ヒストグラム、F検定・t検定・相関をブラウザだけで計算する">
+<meta name="theme-color" content="#1d5c96" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11161b" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="工程能力">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 色・字体は sampling-calc / stackup-calc と共通 */
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --ink: #15212c; --ink2: #475563; --muted: #74818e; --line: #d5dce3;
+  --accent: #1d5c96; --accent-ink: #ffffff; --accent-weak: #e1ebf5;
+  --ok: #17703a; --ok-weak: #e2f2e7; --good: #3f7d1e; --good-weak: #edf5df; --ng: #ad2a22; --ng-weak: #f8e4e2; --warn: #8a5300; --warn-weak: #f8ecd9;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #8c5bd6; --grid: #e4e9ee;
+  --f-ui: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161b; --surface: #19212a; --ink: #e6ecf2; --ink2: #a9b5c1; --muted: #7d8996; --line: #2b3641;
+    --accent: #6ba6df; --accent-ink: #0d1620; --accent-weak: #1c2f43;
+    --ok: #57c483; --ok-weak: #163222; --good: #9ccc65; --good-weak: #23301a; --ng: #f07a70; --ng-weak: #3a1c1a; --warn: #e3a84e; --warn-weak: #36280f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #a07ae0; --grid: #253039;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161b; --surface: #19212a; --ink: #e6ecf2; --ink2: #a9b5c1; --muted: #7d8996; --line: #2b3641;
+  --accent: #6ba6df; --accent-ink: #0d1620; --accent-weak: #1c2f43;
+  --ok: #57c483; --ok-weak: #163222; --good: #9ccc65; --good-weak: #23301a; --ng: #f07a70; --ng-weak: #3a1c1a; --warn: #e3a84e; --warn-weak: #36280f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #a07ae0; --grid: #253039;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.6; -webkit-text-size-adjust: 100%; }
+.num, .mono, input[type="number"], input.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 0 56px; }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 0; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-size: 1.15rem; margin: 0; letter-spacing: .02em; }
+.brand .std { font-size: .78rem; color: var(--muted); }
+.brand .theme { margin-left: auto; }
+nav.tabs { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs button { flex: 0 0 auto; border: 0; background: none; color: var(--ink2); font: inherit; font-size: .92rem; padding: 8px 12px 10px; cursor: pointer; border-bottom: 3px solid transparent; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 700; }
+nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; margin-top: 16px; }
+.box > h2 { font-size: 1rem; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+.box > h2 .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: .78rem; }
+.hint { font-size: .78rem; color: var(--muted); }
+.lbl { font-size: .8rem; color: var(--ink2); letter-spacing: .03em; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+input[type="number"], input[type="text"], select {
+  font-size: .95rem; padding: 7px 9px; border-radius: var(--r); border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 0;
+}
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .9rem; }
+label.chk input { width: 16px; height: 16px; accent-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg button { border: 0; background: var(--bg); color: var(--ink2); font: inherit; font-size: .88rem; padding: 7px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .9rem; padding: 7px 14px; border-radius: var(--r); cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; padding: 9px 22px; }
+.btn.small { font-size: .8rem; padding: 4px 10px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.drop { border: 2px dashed var(--line); border-radius: var(--r); padding: 18px; text-align: center; color: var(--ink2); }
+.drop.over { border-color: var(--accent); background: var(--accent-weak); }
+.drop strong { color: var(--ink); }
+.privacy { font-size: .8rem; color: var(--ok); margin-top: 8px; }
+.filebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: .9rem; }
+
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); margin-top: 10px; }
+table { border-collapse: collapse; font-size: .85rem; min-width: 100%; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th { background: var(--bg); color: var(--ink2); font-weight: 700; position: sticky; top: 0; }
+td.l, th.l { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+td.lab { color: var(--muted); text-align: left; }
+td input { width: 9em; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips label { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px 3px 8px; font-size: .88rem; cursor: pointer; background: var(--bg); }
+.chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-weak); color: var(--ink); }
+.chips input { accent-color: var(--accent); }
+
+.lv { font-weight: 700; border-radius: 4px; padding: 2px 6px; }
+.lv.ex { background: var(--ok-weak); color: var(--ok); }
+.lv.gd { background: var(--good-weak); color: var(--good); }
+.lv.wa { background: var(--warn-weak); color: var(--warn); }
+.lv.ng { background: var(--ng-weak); color: var(--ng); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: .78rem; }
+
+.log { margin: 10px 0 0; padding: 0; list-style: none; font-size: .85rem; }
+.log li { padding: 4px 0 4px 22px; position: relative; border-bottom: 1px dashed var(--line); }
+.log li::before { position: absolute; left: 2px; font-weight: 700; }
+.log li.warn { color: var(--warn); } .log li.warn::before { content: "!"; }
+.log li.err { color: var(--ng); } .log li.err::before { content: "×"; }
+.log li.info { color: var(--ink2); } .log li.info::before { content: "i"; }
+
+.target { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 14px; }
+.target h3 { margin: 0 0 8px; font-size: 1rem; }
+dl.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px 16px; margin: 0 0 10px; }
+dl.kv dt { font-size: .72rem; color: var(--muted); }
+dl.kv dd { margin: 0; font-size: .98rem; }
+dl.kv dd small { color: var(--ink2); font-size: .74rem; }
+.charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 12px; }
+.chart { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; position: relative; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart .save { position: absolute; right: 6px; bottom: 6px; opacity: .0; transition: opacity .15s; }
+.chart:hover .save, .chart:focus-within .save { opacity: 1; }
+@media (hover: none) { .chart .save { opacity: .9; } }
+
+.res-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.res { border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+.res h3 { margin: 0 0 6px; font-size: .95rem; }
+.verdict { font-weight: 700; font-size: 1.05rem; }
+.verdict.sig { color: var(--ng); } .verdict.nsig { color: var(--ok); }
+
+.explain { line-height: 1.8; }
+.explain h1 { font-size: 1.2rem; margin: 0 0 8px; }
+.explain h2 { font-size: 1.08rem; margin: 28px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent-weak); }
+.explain h3 { font-size: .98rem; margin: 18px 0 6px; }
+.explain h4 { font-size: .92rem; margin: 14px 0 4px; }
+.explain pre { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; overflow-x: auto; font-size: .85rem; }
+.explain code { font-family: var(--f-num); }
+.explain table { min-width: 0; margin: 8px 0; }
+.explain hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 8px 16px; border-radius: 999px; font-size: .88rem; z-index: 20; }
+footer { margin-top: 32px; font-size: .78rem; color: var(--muted); }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <h1>工程能力解析</h1>
+      <span class="std">Cp・Cpk・Pp・Ppk ／ 管理図 ／ F検定・t検定・相関</span>
+      <button class="btn small theme" id="themeBtn" type="button" aria-label="表示テーマを切り替え">表示：自動</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="cap" type="button">工程能力解析</button>
+      <button role="tab" aria-selected="false" data-tab="test" type="button">2群の検定・相関</button>
+      <button role="tab" aria-selected="false" data-tab="explain" type="button">解説</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- データ（工程能力解析・検定で共通） -->
+  <section id="dataSec">
+    <div class="box">
+      <h2><span class="step">1</span>データの読み込み</h2>
+      <div class="drop" id="drop">
+        <strong>Excel（.xlsx）または CSV ファイル</strong>をここにドラッグするか、
+        <label class="btn small" style="display:inline-block">ファイルを選択<input type="file" id="fileIn" accept=".xlsx,.xlsm,.csv,.tsv,.txt" hidden></label>
+        <div class="hint" style="margin-top:6px">旧形式の .xls は読めません。Excel で .xlsx に保存し直してください。</div>
+        <div style="margin-top:8px"><button class="btn small" id="sampleBtn" type="button">サンプルデータで試す</button></div>
+      </div>
+      <div class="privacy">ファイルはブラウザの中だけで処理され、どこにも送信されません。</div>
+      <div class="filebar" id="fileBar" hidden>
+        <span>読み込み中のファイル：<strong id="fileName"></strong></span>
+        <label class="field" id="sheetField" hidden><span class="lbl">シート</span><select id="sheetSel"></select></label>
+      </div>
+      <div id="readOpts" hidden>
+        <div class="row" style="margin-top:12px">
+          <label class="chk"><input type="checkbox" id="firstRowData">先頭行をデータとして扱う</label>
+          <label class="chk"><input type="checkbox" id="firstColData">先頭列をデータとして扱う</label>
+          <span class="lbl">計算対象の方向</span>
+          <span class="seg" id="dirSeg"><button type="button" data-v="列方向" aria-pressed="true">列方向</button><button type="button" data-v="行方向" aria-pressed="false">行方向</button></span>
+        </div>
+        <div class="hint" style="margin-top:4px">チェックしないときは、先頭行を列の名前、先頭列を行の名前として使います。チェックしたときは Excel の列記号（A, B…）・行番号を名前にします。</div>
+        <div class="tbl-wrap" id="preview"></div>
+        <div class="hint" id="previewNote"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 工程能力解析 -->
+  <section id="tab-cap" data-panel="cap">
+    <div class="box" id="capSetup" hidden>
+      <h2><span class="step">2</span>解析対象と規格値</h2>
+      <div class="row" style="margin-bottom:8px"><button class="btn small" id="selAll" type="button">すべて選択</button><button class="btn small" id="selNone" type="button">選択を解除</button></div>
+      <div class="chips" id="targetChips"></div>
+      <div id="specWrap" hidden>
+        <div class="row" style="margin-top:14px">
+          <label class="chk"><input type="checkbox" id="sameSpec">すべての対象の規格値を同じにする</label>
+          <span class="hint">片側規格は使わない側を空欄に。両方空欄の対象は解析しません。</span>
+        </div>
+        <div class="tbl-wrap"><table><thead><tr><th class="l">解析対象</th><th>規格上限値（USL）</th><th>規格下限値（LSL）</th><th>データ数</th></tr></thead><tbody id="specBody"></tbody></table></div>
+      </div>
+    </div>
+    <div class="box" id="capOpts" hidden>
+      <h2><span class="step">3</span>解析オプション</h2>
+      <div class="row">
+        <label class="field"><span class="lbl">サブグループサイズ</span>
+          <select id="subgroup"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
+        <div class="field"><span class="lbl">全体の標準偏差（Pp/Ppk）の計算方法</span>
+          <span class="seg" id="stdSeg"><button type="button" data-v="サンプル標準偏差" aria-pressed="true">標本標準偏差（n−1）</button><button type="button" data-v="母集団標準偏差" aria-pressed="false">母集団標準偏差（n）</button></span></div>
+      </div>
+      <div class="hint" style="margin-top:6px">サブグループサイズは管理図の種類（1: I-MR、2以上: X̄-R・s）と、Cp/Cpk に使う群内変動 σ の推定（1: MR̄/d2、2以上: R̄/d2）に使います。データは測定（生産）順に並べてください。</div>
+      <div class="row" style="margin-top:12px">
+        <span class="lbl">出力するグラフ</span>
+        <label class="chk"><input type="checkbox" data-show="hist" checked>ヒストグラム</label>
+        <label class="chk"><input type="checkbox" data-show="qq" checked>QQプロット</label>
+        <label class="chk"><input type="checkbox" data-show="density" checked>確率密度分布</label>
+        <label class="chk"><input type="checkbox" data-show="xbar" checked>X̄／I 管理図</label>
+        <label class="chk"><input type="checkbox" data-show="r" checked>R／MR 管理図</label>
+        <label class="chk"><input type="checkbox" data-show="s" checked>s 管理図</label>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn primary" id="runCap" type="button">解析する</button>
+        <button class="btn small" id="exportSettings" type="button">設定を保存（JSON）</button>
+        <label class="btn small">設定を読み込む<input type="file" id="importSettings" accept=".json,application/json" hidden></label>
+      </div>
+    </div>
+    <div class="box" id="capResult" hidden>
+      <h2>解析結果</h2>
+      <div class="row" style="justify-content:space-between">
+        <span class="hint">判定は Cpk で行い、Cpk を計算できないときは Ppk で判定します。</span>
+        <button class="btn small" id="dlCap" type="button">結果を Excel で保存</button>
+      </div>
+      <div class="tbl-wrap" id="summary"></div>
+      <div class="legend"><span class="lv ex">◎ 1.67 以上</span><span class="lv gd">○ 1.33 以上</span><span class="lv wa">△ 1.00 以上</span><span class="lv ng">✕ 1.00 未満</span></div>
+      <ul class="log" id="capLog"></ul>
+      <div id="capDetail"></div>
+    </div>
+  </section>
+
+  <!-- 2群の検定・相関 -->
+  <section id="tab-test" data-panel="test" hidden>
+    <div class="box" id="testSetup" hidden>
+      <h2><span class="step">2</span>検定の設定</h2>
+      <div class="row">
+        <label class="field"><span class="lbl">対象 1</span><select id="tA"></select></label>
+        <label class="field"><span class="lbl">対象 2</span><select id="tB"></select></label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <label class="chk"><input type="checkbox" id="doF" checked>F検定（分散の比較）</label>
+        <label class="field"><span class="lbl">有意水準</span><input type="number" id="alphaF" value="0.05" step="0.01" min="0.001" max="0.5" style="width:6em"></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="chk"><input type="checkbox" id="doT" checked>t検定（平均の比較）</label>
+        <label class="field"><span class="lbl">種類</span><select id="tKind"><option value="paired">対応あり</option><option value="pooled">独立・分散が等しい</option><option value="welch">独立・分散が異なる（Welch）</option></select></label>
+        <label class="field"><span class="lbl">有意水準</span><input type="number" id="alphaT" value="0.05" step="0.01" min="0.001" max="0.5" style="width:6em"></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="chk"><input type="checkbox" id="doOverlay">正規分布の重ね描き</label>
+        <label class="chk"><input type="checkbox" id="doCorr">相関係数・散布図</label>
+      </div>
+      <div class="hint" style="margin-top:6px">対応ありの t 検定と相関は、同じ行（列方向のとき）の値どうしを組にし、どちらかが空欄の組は除きます。</div>
+      <div class="row" style="margin-top:16px"><button class="btn primary" id="runTest" type="button">検定する</button></div>
+    </div>
+    <div class="box" id="testResult" hidden>
+      <h2>検定結果</h2>
+      <div class="row" style="justify-content:flex-end"><button class="btn small" id="dlTest" type="button">結果を Excel で保存</button></div>
+      <div class="res-grid" id="testCards" style="margin-top:8px"></div>
+      <ul class="log" id="testLog"></ul>
+      <div class="charts" id="testCharts" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- 解説（docs/explanation.md から tools/build.py で生成） -->
+  <section id="tab-explain" data-panel="explain" hidden>
+    <div class="box explain">
+<!--EXPLAIN-START-->
+<h1>解説</h1>
+<p>本解説ページでは、工程能力解析ツールで算出される各統計量やグラフの意味、計算方法、各グラフの見方、そして実務上の活用ポイントについて体系的に解説します。<br />
+以下の各項目を順に学ぶことで、工程の状態の把握と改善に役立つ知識を得ることができます。</p>
+<hr />
+<h2>1. 基本統計量と分布の特徴</h2>
+<h3>1.1 平均値と標準偏差</h3>
+<ul>
+<li><strong>平均値</strong>:<br />
+    工程全体の中心的な値を示し、代表値として利用されます。</li>
+<li><strong>標準偏差</strong>:<br />
+    各データ点が平均値からどれだけ離れているかを数値化したもので、工程のばらつきを示します。<br />
+    標準偏差が小さいほど、データは平均値周辺に集中しています。</li>
+</ul>
+<h3>1.2 尖度と歪度</h3>
+<ul>
+<li><strong>歪度 (Skewness)</strong>:<br />
+    分布の左右対称性を評価する指標です。  <ul>
+<li>|歪度| &lt; 0.5：ほぼ対称  </li>
+<li>0.5 ≤ |歪度| &lt; 1.0：中程度の偏り  </li>
+<li>|歪度| ≥ 1.0：顕著な偏りがある</li>
+</ul>
+</li>
+<li><strong>尖度 (Kurtosis)</strong>:<br />
+    分布のピークの鋭さや尾部の重さ（外れ値の出やすさ）を示します（余剰尖度の場合、正規分布は0が基準）。  <ul>
+<li>-0.5 ～ 0.5：正規分布に近い  </li>
+<li>0.5 ～ 1 または -0.5 ～ -1：やや尖った平らな分布  </li>
+<li>|尖度| &gt; 1：非常に重い尾や平らなピークで、外れ値の影響が大きい</li>
+</ul>
+</li>
+</ul>
+<p>これらの基本統計量は、まずヒストグラムやQQプロットを用いてデータの正規性を確認する際の基礎となります。</p>
+<hr />
+<h2>2. 各グラフの見方</h2>
+<h3>2.1 ヒストグラム</h3>
+<ul>
+<li><strong>目的</strong>:<br />
+    データの度数分布や集中の傾向、外れ値の有無を直感的に把握するためのグラフです。</li>
+<li><strong>見方</strong>:  <ul>
+<li>横軸: 測定値の範囲  </li>
+<li>縦軸: 各範囲に該当するデータ数（度数）</li>
+</ul>
+</li>
+<li><strong>ポイント</strong>:  <ul>
+<li>どの範囲にデータが密集しているか  </li>
+<li>双峰性（2つ以上のピーク）があるか  </li>
+<li>右裾または左裾の伸び具合で分布の非対称性を示すか</li>
+</ul>
+</li>
+</ul>
+<h3>2.2 QQプロット</h3>
+<ul>
+<li><strong>目的</strong>:<br />
+    データが正規分布に従っているかを視覚的に評価するためのプロットです。</li>
+<li><strong>見方</strong>:<br />
+    予測される正規分布の理論分位点と実測分位点がプロットされ、理想的には直線上に並びます。</li>
+<li><strong>ポイント</strong>:<br />
+    点が直線から大きく外れる場合、正規性に逸脱が見られる（外れ値の影響も示唆）。</li>
+</ul>
+<h3>2.3 確率密度分布（Density Plot）</h3>
+<ul>
+<li><strong>目的</strong>:<br />
+    正規分布カーブと実際のデータ分布を比較し、平均値や±3σの位置に対するデータの分布状況を確認します。</li>
+<li><strong>見方</strong>:  <ul>
+<li>カーブの形状やピークの位置、裾の伸び具合を確認  </li>
+<li>規格値（USL, LSL）の位置と重なり具合をチェック</li>
+</ul>
+</li>
+<li><strong>ポイント</strong>:<br />
+    平均値、±3σの位置がどのように評価されるかで、工程のリスク評価に役立ちます。</li>
+</ul>
+<h3>2.4 X-bar管理図とI管理図</h3>
+<h4>X-bar管理図</h4>
+<ul>
+<li><strong>目的</strong>:<br />
+    複数の測定値から算出されたサブグループの平均値を時系列でプロットし、工程の中心位置とばらつきを監視します。</li>
+<li><strong>見方</strong>:  <ul>
+<li>横軸: サブグループ番号  </li>
+<li>縦軸: 各サブグループの平均値  </li>
+<li>管理限界（上限・下限）は、全体平均とサブグループ内のばらつき（A2係数を用いて算出）で決定される。</li>
+</ul>
+</li>
+<li><strong>ポイント</strong>:  <ul>
+<li>大部分の点が管理限界内にあるか  </li>
+<li>連続した偏りや急激な変動の兆候がないか</li>
+</ul>
+</li>
+</ul>
+<h4>I管理図 (Individuals Chart)</h4>
+<ul>
+<li><strong>目的</strong>:<br />
+    個々の測定値をそのままプロットし、リアルタイムの工程変動を把握します。</li>
+<li><strong>見方</strong>:  <ul>
+<li>横軸: 各データ取得の順序  </li>
+<li>縦軸: 各測定値  </li>
+<li>隣接するデータ点の変動（移動範囲：MR管理図）と連動して評価される。</li>
+</ul>
+</li>
+<li><strong>ポイント</strong>:  <ul>
+<li>外れ値や急激な変動が確認できるか  </li>
+<li>リアルタイム性の高いデータ監視に適しているが、外れ値の影響を受けやすい</li>
+</ul>
+</li>
+</ul>
+<h3>2.5 R管理図 / MR管理図</h3>
+<ul>
+<li><strong>目的</strong>:<br />
+    サブグループや隣接するデータの範囲（または移動範囲）から、工程内のばらつきを定量的に評価します。</li>
+<li><strong>見方</strong>:  <ul>
+<li>横軸: サブグループ番号またはデータ点の序列  </li>
+<li>縦軸: 各サブグループのレンジまたは移動範囲</li>
+</ul>
+</li>
+<li><strong>ポイント</strong>:<br />
+    レンジの変動が小さいか、急激な変動点がある場合は工程の不安定が疑われます。</li>
+</ul>
+<h3>2.6 s管理図</h3>
+<ul>
+<li><strong>目的</strong>:<br />
+    各サブグループの標準偏差をプロットし、工程のばらつきの変化をモニタリングします。</li>
+<li><strong>見方</strong>:  <ul>
+<li>横軸: サブグループ番号  </li>
+<li>縦軸: 各サブグループの標準偏差</li>
+</ul>
+</li>
+<li><strong>ポイント</strong>:<br />
+    管理限界との比較により、ばらつきが一定かどうかを評価します。<br />
+    大きな変動があれば工程の改善点となります。</li>
+</ul>
+<hr />
+<h2>3. 工程能力指数（Cp, Cpk, Pp, Ppk）と不良率の関係</h2>
+<h3>3.1 Cp・Cpk と Pp・Ppk の違い（使う σ が違う）</h3>
+<p>本ツールは AIAG SPC マニュアルの定義に合わせ、σ の求め方で4つの指数を区別します。</p>
+<ul>
+<li><strong>Cp / Cpk（工程能力指数）</strong>: <strong>群内変動 σ(群内)</strong> で計算します。サブグループ内の短期的なばらつきだけを見た「工程が本来持っている能力」です。  <ul>
+<li>サブグループサイズ 2 以上: σ(群内) = R̄ / d2（R̄ はサブグループのレンジの平均）  </li>
+<li>サブグループサイズ 1: σ(群内) = MR̄ / d2（隣り合う2点の移動範囲の平均、d2 = 1.128）  </li>
+</ul>
+</li>
+<li><strong>Pp / Ppk（工程性能指数）</strong>: <strong>全データの標準偏差 s</strong> で計算します。サブグループ間の平均のずれやドリフトも含めた「実際に出てきた製品のばらつき」です。</li>
+</ul>
+<pre><code>Cp  = (規格上限値 - 規格下限値) / (6 × σ(群内))
+Cpk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × σ(群内))
+Pp  = (規格上限値 - 規格下限値) / (6 × s)
+Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
+</code></pre>
+<ul>
+<li><strong>片側規格</strong>: Cp・Pp は定義されないため「―」と表示し、Cpk・Ppk には規格がある側の値（CPU = (USL - 平均) / 3σ、CPL = (平均 - LSL) / 3σ）を表示します。</li>
+<li><strong>解釈</strong>: 工程が統計的管理状態にあれば Cpk ≈ Ppk になります。<strong>Cpk が Ppk より明らかに大きい場合は、サブグループ間の変動（平均のずれ・ドリフト）が大きく、工程が管理状態にない</strong>ことを示します。このとき Cpk は実際の製品品質を過大に見積もるので、管理図で原因を確認してください（Cpk / Ppk &gt; 1.33 のとき計算ログに注意を出します）。</li>
+<li>一般に Cpk（Ppk）が 1.33 以上であれば、工程は十分な能力を持つとされます。</li>
+</ul>
+<h3>3.2 計算上の前提と注意</h3>
+<ul>
+<li><strong>σ(群内) はデータが測定（生産）順に並んでいる前提</strong>で求めます。サブグループは先頭から順にサブグループサイズ個ずつ区切り、末尾の端数は σ(群内) の推定に使いません。並び順に意味がないデータ（ランダムに抜き取った寄せ集めなど）では Cp/Cpk は意味を持たないので、Pp/Ppk を参照してください。</li>
+<li>サブグループ数が少ないと σ(群内) の推定は不安定です。工程能力の調査では 25 組程度（個別値なら移動範囲 25 個程度）が目安で、これより少ないときは計算ログに注意を出します。</li>
+<li><strong>信頼区間は Pp/Ppk について表示します</strong>（Pp: カイ二乗分布、Ppk: Bissell の近似。いずれも s が n 個のデータから求めた標本標準偏差である前提）。R̄/d2 による σ(群内) は自由度が異なるため、Cp/Cpk の信頼区間は表示しません。</li>
+<li>「全体の標準偏差の計算方法」で「母集団標準偏差」を選ぶと、s の分母が n - 1 ではなく n になります（Pp/Ppk にのみ影響）。</li>
+</ul>
+<h3>3.3 不良率の計算式</h3>
+<ul>
+<li>
+<p><strong>両側規格で Cp = Cpk = 1（平均が規格の中心）のとき</strong><br />
+    正規分布を前提とすると、平均値から±3σ内に約99.73%のデータが含まれるため、不良率は 
+    <code>不良率 = 2 × (1 - Φ(3)) ≈ 0.27%</code><br />
+    ※ Φ(3) は標準正規分布で 3 以下となる累積確率（≈ 0.99865）です。</p>
+</li>
+<li>
+<p><strong>片側規格で CPU（CPL）= 1 のとき</strong></p>
+<ul>
+<li><strong>CPU の計算式（上側規格のみの例）</strong><br />
+<code>CPU = (規格上限値 - 平均値) / (3 × σ)</code>  </li>
+<li>この場合、不良率は<br />
+<code>不良率 = 1 - Φ(3) ≈ 0.135%</code>  </li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>4. サブグループサイズとA2係数の関係</h2>
+<h3>4.1 A2係数の役割と算出方法</h3>
+<ul>
+<li><strong>A2係数</strong>は、X-bar管理図でサブグループごとの平均レンジから管理限界を設定するための係数です。<br />
+    管理限界は次の式で計算されます。
+    <code>管理限界 = 全体平均 ± (A2 × サブグループ平均レンジ)</code>  </li>
+</ul>
+<h3>4.2 サブグループサイズとA2係数の関係</h3>
+<table>
+<thead>
+<tr>
+<th>サブグループサイズ</th>
+<th>A2係数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>1.88</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1.023</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0.729</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0.577</td>
+</tr>
+<tr>
+<td>6</td>
+<td>0.483</td>
+</tr>
+<tr>
+<td>7</td>
+<td>0.419</td>
+</tr>
+<tr>
+<td>8</td>
+<td>0.373</td>
+</tr>
+<tr>
+<td>9</td>
+<td>0.337</td>
+</tr>
+<tr>
+<td>10</td>
+<td>0.308</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3 解説</h3>
+<ul>
+<li><strong>小さいサブグループ（例：サイズ2～3）</strong>:<br />
+    各グループ内のばらつきが大きく反映されるため、A2係数が高くなり、管理限界は広く設定されます。</li>
+<li><strong>大きいサブグループ（例：サイズ5以上）</strong>:<br />
+    サブグループの平均が安定するため、A2係数は低下し、管理限界が狭くなります。</li>
+<li><strong>実務上の注意</strong>:<br />
+    適切なサブグループサイズの選択は、偽陽性の警報を防ぎ、実際の工程異常を正確に捉えるうえで重要です。</li>
+</ul>
+<hr />
+<h2>5. t検定/F検定</h2>
+<h3>t検定について</h3>
+<p><strong>t検定</strong>は、2つのグループ間で「平均値の差」が偶然の誤差か、本当に意味のある違い（工程の変化や問題）があるかを判断するための統計検定です。<br />
+品質管理では、たとえば「作業前後の測定値の変化」や「2つの生産ライン間の平均値の比較」などに用いられます。</p>
+<ul>
+<li>
+<p><strong>対応ありt検定（ペアt検定）</strong><br />
+同じ対象に対して連続して測定されたデータ（例：改善前後の同一工程の測定値）を比較する際に使用します。<br />
+この検定では各ペアがセットになっており、個々のペア間の差が帰無仮説（「差は0である」）に対し統計的有意性を検討します。</p>
+</li>
+<li>
+<p><strong>独立t検定</strong><br />
+異なるグループ同士の平均値を比較する検定です。たとえば、2つの機械で生産された製品の寸法平均を比較する場合などに用います。<br />
+なお、独立t検定では「各グループの分散（ばらつき）」が等しいかどうかが前提となります。分散が等しいとみなせない場合には、等分散を仮定しない検定（ウェルチのt検定）を利用します。</p>
+</li>
+<li>
+<p><strong>有意水準と検定の意味</strong><br />
+検定を行う際は、有意水準（一般的には0.05など）を設定します。有意水準は「帰無仮説が正しい場合に、誤って差があると判断してしまうリスクの許容度」を意味します。  </p>
+</li>
+<li><strong>帰無仮説 (H₀)</strong>：たとえば「2つの平均値に差はない」または「分散は等しい」といった仮説です。  </li>
+<li>
+<p><strong>対立仮説 (H₁)</strong>：帰無仮説と反対の主張で、「実際には平均値に差がある」「分散は異なる」といった仮説です。<br />
+t検定では、計算されたt値と対応するp値をもとに、p値が有意水準より小さい場合に帰無仮説を棄却し、統計的に有意な差があると判断します。</p>
+</li>
+<li>
+<p><strong>平均値の差と分散の差</strong><br />
+t検定は主に「平均値の差」を評価します。すなわち、工程の中心（平均値）の位置が異なるかを調べます。一方、グループごとの分散やばらつきの比較については、F検定が利用され、別途評価することで工程の安定性も確認できます。</p>
+</li>
+</ul>
+<h3>F検定について</h3>
+<p><strong>F検定</strong>は、2つの群またはグループ間で「分散の差」があるかどうか（＝ばらつきに違いがあるか）を評価する検定です。<br />
+品質管理において、工程が安定しているかどうかは、工程内のばらつき（分散）が小さいことが求められます。たとえば、同一ライン内の変動が大きい場合は工程改善が必要という判断につながります。</p>
+<ul>
+<li><strong>帰無仮説 (H₀)</strong>：両グループの分散は等しい  </li>
+<li><strong>対立仮説 (H₁)</strong>：分散に統計的に有意な差がある<br />
+F検定は、2群の分散の比率をF分布と比較することで、帰無仮説が棄却できるかを判断します。通常、分散の比率が極端に大きいまたは小さい場合に、ばらつきに有意な違いがあるとみなされます。</li>
+</ul>
+<p><strong>検定の選び方のポイント</strong><br />
+- <strong>データの種類</strong><br />
+対応のあるデータ（同じ対象の前後比較）は対応ありt検定、異なる群の比較は独立t検定を選びます。<br />
+- <strong>分散の確認</strong><br />
+独立t検定を行う場合、まずF検定で各グループの分散が等しいかどうかを確認し、等しい場合は標準的なt検定、等しくない場合はウェルチのt検定を選びます。<br />
+- <strong>有意水準の設定</strong><br />
+一般的には0.05（5%）がよく用いられます。これを下回るp値が得られた場合、観測された差は偶然だけでは説明できないと判断します。</p>
+<p>これらの検定結果をもとに、工程改善の必要性や適正な仕様管理の基準を検討することが、品質管理の現場では非常に重要となります。</p>
+<hr />
+<h2>6. 相関係数/決定係数</h2>
+<h3>6.1 相関係数 (Correlation Coefficient)</h3>
+<pre><code>- 2つの数値変数間の関係の強さと方向（正の関係か負の関係か）を数値で表現します。  
+- **値の範囲：** -1 ～ +1  
+    - **+1に近い：** 片方が増加するにつれてもう片方も増加する（正の相関）  
+    - **-1に近い：** 片方の増加に伴いもう片方が減少する（負の相関）  
+    - **0に近い：** 明確な直線的関係がなく、ほとんど関係が見られない
+</code></pre>
+<h3>6.2 決定係数 (Coefficient of Determination)</h3>
+<pre><code>- 回帰分析において、どれだけのデータのばらつき（変動）が説明変数によって説明できるかを示します。  
+- **通常は：** 相関係数の二乗（r²）として計算  
+- **値の範囲：** 0 ～ 1  
+    - **0に近い：** モデルがデータの変動をほとんど説明できていない  
+    - **1に近い：** モデルがデータの変動をほぼ完全に説明できている
+</code></pre>
+<hr />
+<h2>7. 測定データの異常値（アウトライア）の検出と処理</h2>
+<p>測定データにおける異常値は、工程上の偶発的な誤差や測定器の不具合、または実際のプロセス変化を反映する場合があります。以下のポイントを考慮して処理してください。</p>
+<ul>
+<li><strong>異常値の検出</strong>:  </li>
+<li>ヒストグラム、QQプロット、ボックスプロットなどの視覚的手法で、他のデータ点と大きく隔たりのある値を確認する。  </li>
+<li>
+<p>Grubbs検定、Dixon検定、Chauvenetの基準、またはIQR（四分位範囲）を用いた統計的手法により、客観的に異常値を識別する。</p>
+</li>
+<li>
+<p><strong>処理の手順</strong>:  </p>
+</li>
+<li>自動的な除外は避け、まずは該当データの測定条件やプロセス状況を再確認する。  </li>
+<li>測定機器のキャリブレーションや手順の再検討、再サンプリングにより、測定エラーであると判断された場合のみ除外・補正処理を実施する。  </li>
+<li>
+<p>異常値が工程自体の問題を示している場合は、単に除外せず、工程改善の兆候として記録し、評価に反映させる。</p>
+</li>
+<li>
+<p><strong>注意点</strong>:<br />
+異常値の除外や補正はCpkやPpkなどの工程能力指数に大きな影響を及ぼすため、統計的検定結果と現場の状況確認をあわせた慎重なアプローチが求められます。場合により、ロバスト統計量（中央値、MADなど）を使用して再評価することも検討してください。</p>
+</li>
+</ul>
+<hr />
+<h2>8. 実務上の注意点とまとめ</h2>
+<ul>
+<li>
+<p><strong>正規性の確認</strong><br />
+Cp/Cpk/Pp/Ppk の計算はデータが正規分布である前提に依存するため、ヒストグラム、QQプロット、確率密度分布を用いて正規性を十分に確認してください。</p>
+</li>
+<li>
+<p><strong>サンプルサイズの確保</strong><br />
+サンプル数が少ない場合、統計量は不安定となるため、十分なサンプル数を確保することが重要です。少ないデータでは誤った判断につながるリスクがあります。</p>
+</li>
+<li>
+<p><strong>工程の中心性とばらつきのバランス</strong><br />
+Cpkは工程の中心位置（平均値）だけでなく、ばらつき（標準偏差）も評価します。平均値が規格中心からずれている場合や、ばらつきが大きい場合、工程改善の必要性が高まります。</p>
+</li>
+<li>
+<p><strong>検定結果の統合的評価</strong><br />
+t検定やF検定による結果は、単一の指標だけでなく、グラフやその他の統計量と合わせて統合的に評価してください。検定の結果が有意である場合、実際に工程改善を行うかどうかは、現場の状況等も踏まえて総合的に判断する必要があります。</p>
+</li>
+<li>
+<p><strong>各種管理図の活用</strong><br />
+X-bar管理図、I管理図、R/MR管理図、s管理図を併用することで、工程の中心傾向とばらつきの両面から、異常の早期発見や改善点の特定が可能になります。</p>
+</li>
+<li>
+<p><strong>CpkとPpkの比較</strong>:<br />
+短期的に工程が管理状態にある場合はCpkとPpkはほぼ一致しますが、プロセスの不安定性やセンターシフトなどがある場合、PpkはCpkより低くなる傾向があり、長期的な製品品質をより正確に反映します。</p>
+</li>
+<li>
+<p><strong>異常値の取り扱い</strong>:<br />
+異常値の検出と処理は、工程能力評価および工程改善のための重要な手がかりです。統計的検定と現場の確認を組み合わせ、慎重な判断を行ってください。</p>
+</li>
+</ul>
+<h3>まとめ</h3>
+<ul>
+<li>
+<p><strong>基礎を押さえる</strong>:<br />
+平均値、標準偏差、尖度、歪度などの基本統計量を理解し、それに基づいてデータの分布や正規性を把握することが品質管理の基本です。</p>
+</li>
+<li>
+<p><strong>グラフで実践的に把握</strong>:<br />
+ヒストグラム、QQプロット、確率密度分布、各種管理図を用いて、実際の工程データを視覚的に評価し、工程の状態や潜在的な問題を早期に検出しましょう。</p>
+</li>
+<li>
+<p><strong>検定の活用で意思決定を補助</strong>:<br />
+t検定およびF検定を用いて、グループ間の平均値や分散の違いに統計的有意性があるか確認します。  </p>
+</li>
+<li>対応ありt検定は同一対象の前後比較に、独立t検定は別群間の比較に使用し、検定前の前提条件（分散の同等性など）を必ず確認しましょう。  </li>
+<li>
+<p>適切な有意水準を設定し（通常は0.05）、p値により帰無仮説を検討することで、工程改善の根拠を定量的に示すことが可能です。</p>
+</li>
+<li>
+<p><strong>総合的な判断が鍵</strong>:<br />
+各統計検定の結果やグラフを単独で判断するのではなく、全体としての工程データの傾向、ばらつき、異常点を統合的に解釈し、実務上の改善や品質向上のための意思決定に活かすことが重要です。</p>
+</li>
+</ul>
+<!--EXPLAIN-END-->
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/kotaooka/cpk-calc">GitHub</a> ・ MIT License ・ <a href="https://github.com/kotaooka/CpkTools-WebUI">CpkTools-WebUI</a>（Python 版）と同じ定義で計算します
+  </footer>
+</main>
+<div class="toast" id="toast" hidden></div>
+<script src="js/stats.js"></script>
+<script src="js/xlsx.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
