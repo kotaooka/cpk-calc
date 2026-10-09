@@ -37,7 +37,7 @@ python tests/make_xlsx_fixtures.py    # Excel 入出力テスト用のファイ�
 
 - `tests/test.js`：分布関数・Shapiro-Wilk・歪度・尖度・検定・相関・工程能力指数を scipy / pandas の参照値と照合し、d2 係数を数値積分で求め直して照合します
 - `tests/test-xlsx.js`：openpyxl で作ったファイルと Excel で作ったサンプルを読み、openpyxl で読んだ値と全セル照合します。書き出したファイルは自分で読み戻し、openpyxl でも読めることを確認します（python と openpyxl がない環境ではこの確認だけ省略）
-- 工程能力指数の参照値は、CpkTools-WebUI の `capability.py` と同じ定義を numpy で独立に書いて求めています
+- 工程能力指数の参照値は、同じ定義を numpy で独立に書いて求めています
 
 ## 実装のメモ
 

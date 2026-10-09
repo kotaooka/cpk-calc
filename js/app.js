@@ -353,7 +353,7 @@
       `${stamp()}_results.xlsx`, XLSX_TYPE);
   });
 
-  // ---------- 設定の保存・読み込み（CpkTools-WebUI の JSON と互換） ----------
+  // ---------- 設定の保存・読み込み ----------
   $('#exportSettings').addEventListener('click', () => {
     const s = {
       schema_version: '1.0', exported_at: new Date().toISOString(), subgroup_size: st.subgroup, std_method: st.std,
