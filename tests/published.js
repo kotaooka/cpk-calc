@@ -2,7 +2,7 @@
 // tests/test.js が「別の方法で自分で計算した参照値」との照合なのに対し、ここでは答えが公開されているものだけを使う
 //   - NIST StRD（Statistical Reference Datasets）の一変量データ：認証値（平均・標準偏差）
 //   - NIST/SEMATECH e-Handbook of Statistical Methods の数値例：工程能力指数、管理図の係数表、I-MR 管理図、c 管理図
-// NIST の資料は米国政府の著作物で、自由に使える。データファイルは tests/published/ に原本のまま置いている
+// NIST の資料は米国政府の著作物で、米国では著作権の対象外（17 U.S.C. §105）。データファイルは tests/published/ に原本のまま置いている
 'use strict';
 const fs = require('fs');
 const path = require('path');
