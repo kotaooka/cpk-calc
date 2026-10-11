@@ -53,6 +53,22 @@ with sync_playwright() as p:
     pg.click('nav.tabs button[data-tab="test"]'); pg.select_option('#tKind', 'welch'); pg.check('#doOverlay')
     pg.click('#runTest'); pg.wait_for_selector('#testCards .res'); pg.wait_for_timeout(500)
     shoot(pg, '#testResult', OUT / 'test.png', 900)
+    # 計数値：p 管理図（画面で入力したロットごとの検査数・不良数）と不良率の比較
+    pg3 = b.new_context(viewport={'width': 1280, 'height': 900}).new_page()
+    route_fonts(pg3)
+    pg3.goto(URL); pg3.wait_for_load_state('networkidle')
+    pg3.click('#srcSeg button[data-v="grid"]'); pg3.wait_for_selector('#gridWrap input[data-r="0"]')
+    ns = [200, 150, 250, 200, 180, 220, 200, 160, 240, 200, 190, 210, 200, 170, 230, 200, 150, 200, 250, 210]
+    ds = [5, 4, 9, 6, 4, 7, 5, 3, 8, 6, 5, 6, 7, 4, 7, 5, 13, 6, 8, 5]
+    tsv = 'ロット\t検査数\t不良数\n' + '\n'.join(f'L{i + 1:02d}\t{n}\t{d}' for i, (n, d) in enumerate(zip(ns, ds)))
+    pg3.click('#gridWrap input[data-r="0"][data-c="0"]')
+    pg3.evaluate("""t => { const el = document.activeElement; const dt = new DataTransfer(); dt.setData('text/plain', t); el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); }""", tsv)
+    pg3.wait_for_timeout(600)
+    pg3.click('nav.tabs button[data-tab="attr"]'); pg3.click('#runAttr'); pg3.wait_for_selector('#attrCharts svg')
+    pg3.click('#propExample'); pg3.click('#runProp'); pg3.wait_for_selector('#propCards .res'); pg3.wait_for_timeout(500)
+    pg3.evaluate('document.fonts.ready'); pg3.click('#themeBtn'); pg3.click('#themeBtn'); pg3.click('#themeBtn')
+    shoot(pg3, '#attrResult', OUT / 'attr.png', 755)
+    shoot(pg3, '#propResult', OUT / 'prop.png', 760)
     # 画面で入力（新しいページで、保存済みのデータがない状態から）
     pg2 = b.new_context(viewport={'width': 1280, 'height': 900}).new_page()
     route_fonts(pg2)

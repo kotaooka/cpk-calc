@@ -118,6 +118,35 @@ for (const m of Object.keys(S.FACTORS).map(Number)) {
   n++; if (Math.abs(Math.round(s * 1000) / 1000 - S.factor(m, 'd2')) > 1e-9) fails.push(`d2 n=${m}: 表 ${S.factor(m, 'd2')} / 積分 ${s}`);
 }
 
+// 計数値の管理図
+for (const r of R.attr) {
+  const c = S.attrChart(r.kind, r.d, r.n), tag = `${r.kind} 管理図 k=${r.d.length}`;
+  check(`${tag} 中心線`, c.cl[0], r.cl, 1e-12);
+  r.points.forEach((v, i) => check(`${tag} 点 ${i}`, c.points[i], v, 1e-12));
+  r.ucl.forEach((v, i) => check(`${tag} UCL ${i}`, c.ucl[i], v, 1e-12));
+  r.lcl.forEach((v, i) => check(`${tag} LCL ${i}`, c.lcl[i], v, 1e-12));
+  r.sigma.forEach((v, i) => check(`${tag} σ ${i}`, c.sigma[i], v, 1e-12));
+}
+same('p 管理図 不良 0 件は null', S.attrChart('p', [0, 0, 0], [10, 10, 10]), null);
+same('c 管理図 欠点 0 件は null', S.attrChart('c', [0, 0], null), null);
+// 不良率の推定と比較
+for (const r of R.propci) {
+  const cp = S.propCI(r.x, r.n), cp90 = S.propCI(r.x, r.n, 0.10), w = S.wilsonCI(r.x, r.n);
+  check(`Clopper-Pearson 下限 ${r.x}/${r.n}`, cp[0], r.cp[0], 1e-9); check(`Clopper-Pearson 上限 ${r.x}/${r.n}`, cp[1], r.cp[1], 1e-9);
+  check(`Clopper-Pearson 90% 下限 ${r.x}/${r.n}`, cp90[0], r.cp90[0], 1e-9); check(`Clopper-Pearson 90% 上限 ${r.x}/${r.n}`, cp90[1], r.cp90[1], 1e-9);
+  check(`Wilson 下限 ${r.x}/${r.n}`, w[0], r.wilson[0], 1e-12); check(`Wilson 上限 ${r.x}/${r.n}`, w[1], r.wilson[1], 1e-12);
+}
+for (const r of R.twoprop) {
+  const t = S.twoProp(r.x1, r.n1, r.x2, r.n2), tag = `2群 ${r.x1}/${r.n1} vs ${r.x2}/${r.n2}`;
+  check(`${tag} z`, t.z, r.z, 1e-12); check(`${tag} z の p`, t.pZ, r.pz, 1e-11);
+  check(`${tag} Fisher p`, t.pFisher, r.fisher, 1e-10);
+  check(`${tag} 差の下限`, t.diffCI[0], r.ci[0], 1e-12); check(`${tag} 差の上限`, t.diffCI[1], r.ci[1], 1e-12);
+}
+for (const r of R.propchi2) {
+  const t = S.propChi2(r.x, r.n), tag = `χ² ${r.x.length} 群`;
+  check(`${tag} χ²`, t.chi2, r.chi2, 1e-12); check(`${tag} 自由度`, t.df, r.df); check(`${tag} p`, t.p, r.p, 1e-11);
+}
+
 // Excel 入出力のテストは別ファイル
 (async () => {
   try { await require('./test-xlsx.js')(check, fails, () => n++); }

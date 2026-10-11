@@ -94,6 +94,7 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
 label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .9rem; }
 label.chk input { width: 16px; height: 16px; accent-color: var(--accent); }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+#attrKind button { min-width: 3.4em; }
 .seg button { border: 0; background: var(--bg); color: var(--ink2); font: inherit; font-size: .88rem; padding: 7px 12px; cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
@@ -189,6 +190,9 @@ table.grid th .gh .gdel { border: 0; background: none; color: var(--muted); curs
 table.grid th .gh .gstat { font-size: .7rem; color: var(--muted); font-weight: 400; font-family: var(--f-num); }
 table.spec td.draw input { width: 15em; font-family: var(--f-num); }
 table.spec td.draw input.bad { border-color: var(--ng); }
+table.prop input { width: 8em; font-family: var(--f-num); }
+table.prop td.l input { width: 12em; font-family: inherit; }
+table.prop input.bad { border-color: var(--ng); }
 table.spec td.draw .msg { display: block; font-size: .72rem; color: var(--ng); white-space: normal; text-align: left; }
 details.planner summary { cursor: pointer; list-style: none; }
 details.planner summary::-webkit-details-marker { display: none; }
@@ -231,12 +235,13 @@ footer a { color: inherit; }
   <div class="top-in">
     <div class="brand">
       <a class="home" href="https://kotaooka.github.io/" title="QC Workbench（ツール一覧）へ戻る">QC Workbench</a><span class="crumb" aria-hidden="true">›</span><h1>工程能力解析</h1>
-      <span class="std">Cp・Cpk・Pp・Ppk ／ 管理図 ／ F検定・t検定・相関</span>
+      <span class="std">Cp・Cpk・Pp・Ppk ／ 管理図 ／ F検定・t検定・相関 ／ 計数値の管理図・不良率の比較</span>
       <button class="btn small theme" id="themeBtn" type="button" aria-label="表示テーマを切り替え">表示：自動</button>
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="cap" type="button">工程能力解析</button>
       <button role="tab" aria-selected="false" data-tab="test" type="button">2群の検定・相関</button>
+      <button role="tab" aria-selected="false" data-tab="attr" type="button">計数値</button>
       <button role="tab" aria-selected="false" data-tab="explain" type="button">解説</button>
     </nav>
   </div>
@@ -396,6 +401,59 @@ footer a { color: inherit; }
       <div class="res-grid" id="testCards" style="margin-top:8px"></div>
       <ul class="log" id="testLog"></ul>
       <div class="charts" id="testCharts" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- 計数値：計数値の管理図・不良率の比較 -->
+  <section id="tab-attr" data-panel="attr" hidden>
+    <div class="box" id="attrSetup">
+      <h2><span class="step">2</span>計数値の管理図</h2>
+      <div class="hint" id="attrNoData">上の「データ」に、群（ロット・日など）ごとの<strong>不良数（欠点数）</strong>と<strong>検査数</strong>を 1 行 1 群で並べて読み込んでください。検査数が毎回同じなら、不良数の列だけでもかまいません。</div>
+      <div id="attrForm" hidden>
+        <div class="row">
+          <div class="field"><span class="lbl">管理図の種類</span>
+            <span class="seg" id="attrKind"><button type="button" data-v="p" aria-pressed="true" title="不良率">p</button><button type="button" data-v="np" aria-pressed="false" title="不良数">np</button><button type="button" data-v="u" aria-pressed="false" title="単位あたりの欠点数">u</button><button type="button" data-v="c" aria-pressed="false" title="欠点数">c</button></span></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label class="field"><span class="lbl" id="attrDLbl">不良数の列</span><select id="attrD"></select></label>
+          <label class="field" id="attrNField"><span class="lbl" id="attrNLbl">検査数</span><select id="attrN"></select></label>
+          <label class="field" id="attrNConstField"><span class="lbl" id="attrNConstLbl">検査数（一定）</span><input type="number" id="attrNConst" class="num" min="0" step="any" style="width:8em" placeholder="例：200"></label>
+        </div>
+        <div class="hint" style="margin-top:6px" id="attrKindHint"></div>
+        <div class="row" style="margin-top:12px">
+          <label class="chk"><input type="checkbox" id="attrRules" checked>異常判定ルールを使う（JIS Z 9020-2 の 8 ルール）</label>
+        </div>
+        <div class="row" style="margin-top:16px"><button class="btn primary" id="runAttr" type="button">管理図を描く</button></div>
+      </div>
+    </div>
+    <div class="box" id="attrResult" hidden>
+      <h2>管理図の結果</h2>
+      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printAttr" type="button">印刷・PDF で保存</button><button class="btn small" id="dlAttr" type="button">結果を Excel で保存</button></div>
+      <dl class="kv" id="attrKv" style="margin-top:8px"></dl>
+      <ul class="rulehits" id="attrHits"></ul>
+      <ul class="log" id="attrLog"></ul>
+      <div class="charts" id="attrCharts" style="margin-top:12px"></div>
+    </div>
+
+    <div class="box" id="propSetup">
+      <h2>不良率の比較</h2>
+      <div class="hint">群（変更前・変更後、仕入先ごと など）の検査数と不良数を入れると、不良率に差があるかを検定します。2 群なら z 検定と Fisher の正確検定、3 群以上なら χ² 検定です。データの読み込みは不要です。</div>
+      <div class="tbl-wrap" style="margin-top:10px"><table class="spec prop"><thead><tr><th class="l">群の名前</th><th>検査数</th><th>不良数</th><th></th></tr></thead><tbody id="propBody"></tbody></table></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn small" id="propAdd" type="button">＋ 群を追加</button>
+        <button class="btn small" id="propExample" type="button">例を入れる</button>
+        <label class="field"><span class="lbl">有意水準</span><select id="propAlpha"><option value="0.10">0.10</option><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></label>
+      </div>
+      <div class="hint" style="margin-top:6px">Excel で「群の名前・検査数・不良数」の範囲をコピーし、表の左上の欄に貼り付けることもできます。</div>
+      <div class="row" style="margin-top:16px"><button class="btn primary" id="runProp" type="button">比較する</button></div>
+    </div>
+    <div class="box" id="propResult" hidden>
+      <h2>比較の結果</h2>
+      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printProp" type="button">印刷・PDF で保存</button><button class="btn small" id="dlProp" type="button">結果を Excel で保存</button></div>
+      <div class="tbl-wrap" id="propTable" style="margin-top:8px"></div>
+      <div class="res-grid" id="propCards" style="margin-top:12px"></div>
+      <ul class="log" id="propLog"></ul>
+      <div class="charts" id="propCharts" style="margin-top:12px"></div>
     </div>
   </section>
 
@@ -782,7 +840,64 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
     - **1に近い：** モデルがデータの変動をほぼ完全に説明できている
 </code></pre>
 <hr />
-<h2>7. 測定データの異常値（アウトライア）の検出と処理</h2>
+<h2>7. 計数値の管理図（p・np・u・c）</h2>
+<p>「計数値」タブでは、不良数や欠点数のように<strong>数えて得るデータ</strong>の管理図を描きます。データは 1 行 1 群（ロット・日など）で、不良数（欠点数）と検査数（単位数）を並べます。</p>
+<table>
+<thead>
+<tr>
+<th>管理図</th>
+<th>打点する値</th>
+<th>中心線</th>
+<th>管理限界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>p（不良率）</td>
+<td>pᵢ = 不良数 ÷ 検査数 nᵢ</td>
+<td>p̄ = Σ不良数 ÷ Σnᵢ</td>
+<td>p̄ ± 3√(p̄(1 − p̄) / nᵢ)</td>
+</tr>
+<tr>
+<td>np（不良数）</td>
+<td>不良数</td>
+<td>n·p̄</td>
+<td>n·p̄ ± 3√(n·p̄(1 − p̄))</td>
+</tr>
+<tr>
+<td>u（単位あたりの欠点数）</td>
+<td>uᵢ = 欠点数 ÷ 単位数 nᵢ</td>
+<td>ū = Σ欠点数 ÷ Σnᵢ</td>
+<td>ū ± 3√(ū / nᵢ)</td>
+</tr>
+<tr>
+<td>c（欠点数）</td>
+<td>欠点数</td>
+<td>c̄ = 欠点数の平均</td>
+<td>c̄ ± 3√c̄</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>不良の数は<strong>二項分布</strong>、欠点の数は<strong>ポアソン分布</strong>に従うと考え、その標準偏差の 3 倍で管理限界を引きます</li>
+<li>p・u 管理図は検査数（単位数）が群ごとに違ってもよく、管理限界は群ごとに変わります（検査数が少ない群ほど広い）。np・c 管理図は検査数（調べる大きさ）が一定のときに使います</li>
+<li>下側管理限界が負になるときは 0 にします。その群では、不良の減少（改善）を管理限界外として検出できません</li>
+<li>異常判定ルールは計量値の管理図と同じ JIS Z 9020-2 の 8 ルールで、領域は打ち切る前の σ で決めます。不良数の平均（n·p̄、欠点数の平均）が 5 未満だと分布が左右非対称になり、正規分布を前提にしたルールが合いにくくなるので、画面に注意を出します</li>
+</ul>
+<h2>8. 不良率の比較（比率の検定）</h2>
+<p>群ごとの検査数と不良数から、不良率に差があるかを検定します。変更前後の比較や、仕入先・ラインごとの比較に使います。</p>
+<h3>8.1 各群の不良率の信頼区間</h3>
+<p><strong>Clopper-Pearson 法（正確法）</strong>で求めます。二項分布をそのまま使うので、不良が 0 個のときや検査数が少ないときにも信頼度を下回りません。x 個不良・検査数 n、信頼度 1 − α のとき、下限は B⁻¹(α/2; x, n − x + 1)、上限は B⁻¹(1 − α/2; x + 1, n − x) です（B⁻¹ はベータ分布の分位点）。</p>
+<h3>8.2 2 群の比較</h3>
+<ul>
+<li><strong>z 検定（正規近似）</strong>：2 群を合わせた不良率 p̄ = (x₁ + x₂) / (n₁ + n₂) を使い、z = (p₁ − p₂) / √(p̄(1 − p̄)(1/n₁ + 1/n₂)) を標準正規分布で評価します（両側）。QC 検定などで「母不良率の差の検定」として扱う方法です。z² は 2×2 表の χ² 検定（連続修正なし）の χ² 値と一致します</li>
+<li><strong>Fisher の正確検定</strong>：近似を使わず、行と列の合計を固定したときの超幾何分布から p 値を求めます（両側。観測した表以下の確率の表をすべて足す）</li>
+<li><strong>判定に使う検定</strong>：2×2 表の期待度数がすべて 5 以上なら z 検定、5 未満の欄があれば Fisher の正確検定で判定します。もう一方は参考として表示します</li>
+<li><strong>差の信頼区間</strong>：Newcombe の方法（各群の Wilson のスコア区間を組み合わせる方法）で求めます。単純な正規近似（p₁ − p₂ ± z·SE）より、不良率が 0 に近いときや検査数が少ないときの精度が良い方法です</li>
+</ul>
+<h3>8.3 3 群以上の比較</h3>
+<p>2 × k の分割表で、不良率がすべての群で等しいかを <strong>χ² 検定</strong>（連続修正なし、自由度 k − 1）で調べます。有意になっても分かるのは「どこかの群に差がある」ことまでです。どの群に差があるかを 2 群ずつ比べるときは、比べる回数が増えるほど偶然の差を差と判定しやすくなる点に注意してください。期待度数が 5 未満の欄があると近似が悪くなるので、画面に注意を出します。</p>
+<h2>9. 測定データの異常値（アウトライア）の検出と処理</h2>
 <p>測定データにおける異常値は、工程上の偶発的な誤差や測定器の不具合、または実際のプロセス変化を反映する場合があります。以下のポイントを考慮して処理してください。</p>
 <ul>
 <li><strong>異常値の検出</strong>:  </li>
@@ -804,7 +919,7 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
 </li>
 </ul>
 <hr />
-<h2>8. 実務上の注意点とまとめ</h2>
+<h2>10. 実務上の注意点とまとめ</h2>
 <ul>
 <li>
 <p><strong>正規性の確認</strong><br />

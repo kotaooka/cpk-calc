@@ -105,9 +105,65 @@ for c, t, a in [(1.67, 1.33, 0.05), (1.5, 1.33, 0.05), (2.0, 1.33, 0.05), (1.4, 
         n = next(k for k in range(2, 10_000_000) if lower(c, k, a) >= t)
     R['reqn'].append(dict(c=c, t=t, a=a, n=n))
 
+# ---- 計数値の管理図（p・np・u・c）：教科書の式を numpy で独立に書く ----
+def attr(kind, d, n=None):
+    d = np.asarray(d, float)
+    if kind in ('p', 'np'):
+        n = np.asarray(n, float); pb = d.sum() / n.sum()
+        if kind == 'p':
+            s = np.sqrt(pb * (1 - pb) / n)
+            return dict(points=d / n, cl=pb, ucl=np.minimum(1, pb + 3 * s), lcl=np.maximum(0, pb - 3 * s), sigma=s)
+        m = n[0]; s = math.sqrt(m * pb * (1 - pb))
+        return dict(points=d, cl=m * pb, ucl=[min(m, m * pb + 3 * s)] * len(d), lcl=[max(0, m * pb - 3 * s)] * len(d), sigma=[s] * len(d))
+    if kind == 'u':
+        n = np.asarray(n, float); ub = d.sum() / n.sum(); s = np.sqrt(ub / n)
+        return dict(points=d / n, cl=ub, ucl=ub + 3 * s, lcl=np.maximum(0, ub - 3 * s), sigma=s)
+    cb = d.mean(); s = math.sqrt(cb)
+    return dict(points=d, cl=cb, ucl=[cb + 3 * s] * len(d), lcl=[max(0, cb - 3 * s)] * len(d), sigma=[s] * len(d))
+pd_ = [int(v) for v in rng.binomial(200, 0.03, 20)]
+pn_ = [int(v) for v in rng.integers(80, 260, 20)]
+pdv = [int(rng.binomial(m, 0.04)) for m in pn_]
+cd_ = [int(v) for v in rng.poisson(4.2, 25)]
+un_ = [float(v) for v in rng.choice([1.0, 1.5, 2.0, 2.5], 25)]
+ud_ = [int(rng.poisson(3.1 * a)) for a in un_]
+R['attr'] = [
+    dict(kind='p', d=pdv, n=pn_, **attr('p', pdv, pn_)),
+    dict(kind='p', d=pd_, n=[200] * 20, **attr('p', pd_, [200] * 20)),
+    dict(kind='p', d=[0, 1, 0, 2, 1], n=[10] * 5, **attr('p', [0, 1, 0, 2, 1], [10] * 5)),
+    dict(kind='np', d=pd_, n=[200] * 20, **attr('np', pd_, [200] * 20)),
+    dict(kind='u', d=ud_, n=un_, **attr('u', ud_, un_)),
+    dict(kind='c', d=cd_, n=None, **attr('c', cd_)),
+    dict(kind='c', d=[0, 1, 0, 2, 0, 1], n=None, **attr('c', [0, 1, 0, 2, 0, 1])),
+]
+
+# ---- 不良率の推定と比較 ----
+# Clopper-Pearson：scipy の binomtest（method='exact'）、Wilson：同（method='wilson'）
+R['propci'] = []
+for x_, n_ in [(0, 50), (3, 80), (12, 300), (50, 50), (1, 2), (7, 1000)]:
+    r = stats.binomtest(x_, n_)
+    R['propci'].append(dict(x=x_, n=n_, cp=list(r.proportion_ci(0.95, method='exact')), cp90=list(r.proportion_ci(0.90, method='exact')),
+                            wilson=list(r.proportion_ci(0.95, method='wilson'))))
+# 2 群：z 検定（numpy で式どおり）、Fisher（scipy.stats.fisher_exact）、Newcombe の差の区間（scipy の Wilson 区間から組む）
+R['twoprop'] = []
+for x1, n1, x2, n2 in [(12, 300, 25, 310), (0, 50, 4, 60), (3, 20, 9, 22), (40, 1000, 41, 980), (5, 5, 0, 7), (1, 400, 1, 400)]:
+    p1, p2, pp = x1 / n1, x2 / n2, (x1 + x2) / (n1 + n2)
+    se = math.sqrt(pp * (1 - pp) * (1 / n1 + 1 / n2)); z = (p1 - p2) / se
+    w1 = stats.binomtest(x1, n1).proportion_ci(0.95, method='wilson'); w2 = stats.binomtest(x2, n2).proportion_ci(0.95, method='wilson')
+    d = p1 - p2
+    lo = d - math.sqrt((p1 - w1.low) ** 2 + (w2.high - p2) ** 2); hi = d + math.sqrt((w1.high - p1) ** 2 + (p2 - w2.low) ** 2)
+    R['twoprop'].append(dict(x1=x1, n1=n1, x2=x2, n2=n2, z=z, pz=2 * stats.norm.sf(abs(z)),
+                             fisher=stats.fisher_exact([[x1, n1 - x1], [x2, n2 - x2]]).pvalue, ci=[lo, hi]))
+# k 群：scipy.stats.chi2_contingency（連続修正なし）
+R['propchi2'] = []
+for xs, ns in [([12, 25], [300, 310]), ([5, 9, 14, 6], [200, 210, 190, 205]), ([0, 3, 1], [40, 45, 50]), ([30, 28, 41, 35, 22], [1000, 950, 1020, 990, 1010])]:
+    tbl = np.array([xs, [a - b for a, b in zip(ns, xs)]])
+    c2, pv, dof, _ = stats.chi2_contingency(tbl, correction=False)
+    R['propchi2'].append(dict(x=xs, n=ns, chi2=c2, p=pv, df=dof))
+
 def clean(o):
     if isinstance(o, dict): return {k: clean(v) for k, v in o.items()}
     if isinstance(o, (list, tuple)): return [clean(v) for v in o]
+    if isinstance(o, np.ndarray): return [clean(v) for v in o.tolist()]
     if isinstance(o, (np.floating, float)): return float(o)
     if isinstance(o, np.integer): return int(o)
     return o

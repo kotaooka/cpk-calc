@@ -536,7 +536,107 @@
     return out;
   }
 
+  // =========================================================================
+  // 計数値の管理図（p・np・u・c）
+  // =========================================================================
+  // type: 'p'（不良率）| 'np'（不良数）| 'u'（単位あたりの欠点数）| 'c'（欠点数）
+  // d: 群ごとの不良数・欠点数、n: 群ごとの検査数・単位数（c 管理図では使わない）
+  // 管理限界は 中心線 ± 3σ（σ は二項分布・ポアソン分布の標準偏差）。下限は 0（p は上限 1、np は上限 n）で打ち切る。
+  // p・u 管理図は群ごとの n で管理限界が変わる。sigma は異常判定ルールの領域（打ち切る前の σ）に使う。
+  // 戻り値 null：中心線が 0（不良が 1 つもない）か、p 管理図で中心線が 1 のとき（σ = 0 で管理図にならない）
+  function attrChart(type, d, n) {
+    const k = d.length;
+    if (!k) return null;
+    const sumD = sum(d);
+    if (type === 'p' || type === 'np') {
+      const sumN = sum(n), pbar = sumD / sumN;
+      if (!(pbar > 0 && pbar < 1)) return null;
+      if (type === 'p') {
+        const sg = n.map(ni => Math.sqrt(pbar * (1 - pbar) / ni));
+        return { type, points: d.map((v, i) => v / n[i]), start: 1, center: pbar, cl: fill(k, pbar),
+          ucl: sg.map(s => Math.min(1, pbar + 3 * s)), lcl: sg.map(s => Math.max(0, pbar - 3 * s)), sigma: sg, sumD, sumN };
+      }
+      // np 管理図は n が一定のときだけ（呼び出し側で確認する）
+      const m = n[0], cl = m * pbar, s = Math.sqrt(m * pbar * (1 - pbar));
+      return { type, points: d.slice(), start: 1, center: cl, pbar, cl: fill(k, cl),
+        ucl: fill(k, Math.min(m, cl + 3 * s)), lcl: fill(k, Math.max(0, cl - 3 * s)), sigma: fill(k, s), sumD, sumN };
+    }
+    if (type === 'u') {
+      const sumN = sum(n), ubar = sumD / sumN;
+      if (!(ubar > 0)) return null;
+      const sg = n.map(ni => Math.sqrt(ubar / ni));
+      return { type, points: d.map((v, i) => v / n[i]), start: 1, center: ubar, cl: fill(k, ubar),
+        ucl: sg.map(s => ubar + 3 * s), lcl: sg.map(s => Math.max(0, ubar - 3 * s)), sigma: sg, sumD, sumN };
+    }
+    if (type === 'c') {
+      const cbar = sumD / k;
+      if (!(cbar > 0)) return null;
+      const s = Math.sqrt(cbar);
+      return { type, points: d.slice(), start: 1, center: cbar, cl: fill(k, cbar),
+        ucl: fill(k, cbar + 3 * s), lcl: fill(k, Math.max(0, cbar - 3 * s)), sigma: fill(k, s), sumD };
+    }
+    return null;
+  }
+
+  // =========================================================================
+  // 不良率（比率）の推定と比較
+  // =========================================================================
+  // ベータ分布の分位点 I_x(a, b) = q となる x
+  const betaPpf = (q, a, b) => invert(x => ibeta(x, a, b), q, 0, 1);
+  // Clopper-Pearson 法（正確法）の両側信頼区間。x：不良数、n：検査数
+  function propCI(x, n, alpha = 0.05) {
+    return [x === 0 ? 0 : betaPpf(alpha / 2, x, n - x + 1), x === n ? 1 : betaPpf(1 - alpha / 2, x + 1, n - x)];
+  }
+  // Wilson のスコア区間（Newcombe の差の区間に使う）
+  function wilsonCI(x, n, alpha = 0.05) {
+    const z = normPpf(1 - alpha / 2), p = x / n, z2 = z * z;
+    const c = (p + z2 / (2 * n)) / (1 + z2 / n);
+    const h = z * Math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n);
+    return [c - h, c + h];
+  }
+  // 2 群の不良率の比較。正規近似の z 検定（併合した不良率で標準誤差を求める）、
+  // Fisher の正確検定（両側）、差 p1 − p2 の Newcombe の信頼区間（Wilson 区間の組み合わせ、method 10）
+  function twoProp(x1, n1, x2, n2, alpha = 0.05) {
+    const p1 = x1 / n1, p2 = x2 / n2, pp = (x1 + x2) / (n1 + n2);
+    const se = Math.sqrt(pp * (1 - pp) * (1 / n1 + 1 / n2));
+    const z = se > 0 ? (p1 - p2) / se : 0;
+    const pz = se > 0 ? Math.min(1, 2 * normSf(Math.abs(z))) : 1;
+    const [l1, u1] = wilsonCI(x1, n1, alpha), [l2, u2] = wilsonCI(x2, n2, alpha), d = p1 - p2;
+    const diffCI = [d - Math.sqrt((p1 - l1) ** 2 + (u2 - p2) ** 2), d + Math.sqrt((u1 - p1) ** 2 + (p2 - l2) ** 2)];
+    // 期待度数（2×2 表）
+    const N = n1 + n2, m1 = x1 + x2, m0 = N - m1;
+    const expected = [n1 * m1 / N, n1 * m0 / N, n2 * m1 / N, n2 * m0 / N];
+    return { p1, p2, diff: d, pooled: pp, z, pZ: pz, pFisher: fisherExact(x1, n1, x2, n2), diffCI, minExpected: Math.min(...expected) };
+  }
+  // Fisher の正確検定（両側）。2×2 表 [[x1, n1 − x1], [x2, n2 − x2]]。
+  // 観測した表の確率以下の表の確率を合計する（scipy.stats.fisher_exact と同じく相対誤差 1e-7 の余裕を持たせる）
+  function fisherExact(x1, n1, x2, n2) {
+    const m = x1 + x2, N = n1 + n2;
+    const lc = (a, b) => lgamma(a + 1) - lgamma(b + 1) - lgamma(a - b + 1);
+    const lp = a => lc(n1, a) + lc(n2, m - a) - lc(N, m);
+    const lo = Math.max(0, m - n2), hi = Math.min(n1, m);
+    const lpObs = lp(x1);
+    let s = 0;
+    for (let a = lo; a <= hi; a++) { const v = lp(a); if (v <= lpObs + 1e-7) s += Math.exp(v); }
+    return Math.min(1, s);
+  }
+  // k 群の不良率の一様性の χ² 検定（2×k の分割表、連続修正なし）
+  function propChi2(x, n) {
+    const k = x.length, N = sum(n), m1 = sum(x), m0 = N - m1;
+    if (!(m1 > 0 && m0 > 0)) return null;
+    let chi2 = 0, small = 0, minE = Infinity;
+    for (let i = 0; i < k; i++) {
+      const e1 = n[i] * m1 / N, e0 = n[i] * m0 / N;
+      chi2 += (x[i] - e1) ** 2 / e1 + (n[i] - x[i] - e0) ** 2 / e0;
+      if (e1 < 5) small++; if (e0 < 5) small++;
+      minE = Math.min(minE, e1, e0);
+    }
+    const df = k - 1;
+    return { chi2, df, p: Math.min(1, gammaQ(df / 2, chi2 / 2)), pooled: m1 / N, smallCells: small, cells: 2 * k, minExpected: minE };
+  }
+
   const api = {
+    attrChart, propCI, wilsonCI, twoProp, fisherExact, propChi2, betaPpf,
     lgamma, ibeta, gammaP, gammaQ, erfc, normCdf, normSf, normPdf, normPpf, chi2Cdf, chi2Ppf,
     tCdf, tSf, tPdf, tPpf, fCdf, fSf, fPdf, fPpf,
     sum, mean, variance, sd, skewness, kurtosis, shapiro, fTest, tTest, correlation,

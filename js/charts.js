@@ -40,7 +40,8 @@
     if (!opt.y) { const pad = (y1 - y0) * 0.08 || 1; y1 += pad; if (!opt.yZero || y0 < 0) y0 -= pad; }
     const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r);
     const Y = v => H - M.b - (v - y0) / (y1 - y0) * (H - M.t - M.b);
-    const tx = ticks(x0, x1, 7), ty = ticks(y0, y1, 5);
+    // opt.xTicks：目盛りを指定する（群の番号など整数だけを出したいとき）
+    const tx = opt.xTicks ? { t: opt.xTicks, step: 1 } : ticks(x0, x1, 7), ty = ticks(y0, y1, 5);
     let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="var(--f-ui)" role="img" aria-label="${esc(opt.title || '')}">`;
     s += `<rect width="${W}" height="${H}" fill="var(--surface)"/>`;
     if (opt.title) s += `<text x="${M.l}" y="20" font-size="14" font-weight="700" fill="var(--ink)">${esc(opt.title)}</text>`;
