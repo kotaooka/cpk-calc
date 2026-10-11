@@ -33,6 +33,7 @@ tests/                 テスト（下記）
 
 ```
 node tests/test.js                    # 不一致があれば終了コード 1
+node tests/published.js               # NIST の認証値・数値例との照合（不一致があれば終了コード 1）
 python tests/make_reference.py        # 参照値 tests/reference.json を作り直す（numpy・scipy・pandas）
 python tests/make_xlsx_fixtures.py    # Excel 入出力テスト用のファイルと期待値を作り直す（openpyxl）
 ```
@@ -40,6 +41,7 @@ python tests/make_xlsx_fixtures.py    # Excel 入出力テスト用のファイ�
 - `tests/test.js`：分布関数・Shapiro-Wilk・歪度・尖度・検定・相関・工程能力指数・推定不良率（ppm）・サイズが揃わないサブグループの σ と管理限界を scipy / numpy / pandas の参照値と照合し、d2 係数を数値積分で求め直して照合します。管理図の異常判定ルールは、ルールごとに作った並びで判定結果を確認します。計数値の管理図は教科書の式を numpy で独立に書いた値と、不良率の信頼区間は scipy の binomtest、Fisher の正確検定は scipy の fisher_exact、χ² 検定は scipy の chi2_contingency（連続修正なし）、Newcombe の差の区間は scipy の Wilson 区間から組んだ値と照合します。図面の表記の読み取りと、必要データ数（Python で総当たりした値と照合）も確認します
 - `tests/test-xlsx.js`：openpyxl で作ったファイルと Excel で作ったサンプルを読み、openpyxl で読んだ値と全セル照合します。書き出したファイルは自分で読み戻し、openpyxl でも読めることを確認します（python と openpyxl がない環境ではこの確認だけ省略）
 - 工程能力指数の参照値は、同じ定義を numpy で独立に書いて求めています
+- `tests/published.js`：答えが公開されているものだけで照合します。NIST StRD の一変量データ（`tests/published/` に原本のまま置いている）の平均・標準偏差と、NIST/SEMATECH e-Handbook の数値例（工程能力指数 6.1.6、係数表 6.3.2.1、I-MR 管理図 6.3.2.2、c 管理図 6.3.3.1）です。必要な一致桁数は、入力を倍精度で読んだ時点で失われる桁を上限として決めています
 
 ## 実装のメモ
 

@@ -85,6 +85,22 @@ Excel の測定データから **Cp・Cpk・Pp・Ppk**、管理図、ヒスト�
 - 計数値の管理図（p・np・u・c の中心線・管理限界）、不良率の信頼区間（Clopper-Pearson・Wilson）、z 検定・Fisher の正確検定・Newcombe の差の信頼区間、k 群の χ² 検定
 - Excel の読み込み（openpyxl で読んだ値との全セル照合）と書き出し（openpyxl で読めることを確認）
 
+### 公開されている例題・認証値との照合
+
+上の照合は「自分で別に計算した値」との比較です。これとは別に、答えが公開されているものでも確かめています（`tests/published.js`、push のたびに実行）。出典はいずれも米国国立標準技術研究所（NIST）の公開資料です。
+
+| 計算 | 出典 | 結果 |
+|---|---|---|
+| 平均・標準偏差（Pp・Ppk に使う s） | [NIST StRD](https://www.nist.gov/itl/products-and-services/statistical-reference-datasets) の一変量データ 7 組（PiDigits、Mavro、Michelso、NumAcc1〜4。最大 5,000 点） | 平均は 14 桁以上、標準偏差は 8〜15 桁一致 |
+| 工程能力指数 | [e-Handbook 6.1.6](https://www.itl.nist.gov/div898/handbook/pmc/section1/pmc16.htm) の数値例（USL 20、LSL 8、平均 16、標準偏差 2） | Cp 1.0、Cpk 0.6667、Cpu 0.6667、Cpl 1.3333 で一致 |
+| X̄-R 管理図の係数 A2・D3・D4 | [e-Handbook 6.3.2.1](https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc321.htm) の係数表（n = 2〜10） | 27 個中 25 個が一致。D4 の n = 3・5 だけ 0.001 違う（下記） |
+| I-MR 管理図 | [e-Handbook 6.3.2.2](https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc322.htm) の数値例（流量 10 バッチ） | 移動範囲、x̄ 50.81、MR̄ 1.8778、UCL 55.8041、LCL 45.8159 で一致 |
+| c 管理図 | [e-Handbook 6.3.3.1](https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc331.htm) の数値例（ウェハー 25 枚の欠点数） | c̄ 16、UCL 28、LCL 4 で一致 |
+
+- 一致桁数の 15 前後が、パソコンの計算（倍精度）で出せる限界です。標準偏差の 8〜9 桁（NumAcc3・4）は、10000000.2 のような値を読み込んだ時点の丸め誤差で決まる上限で、ツールはその上限まで一致しています。実際の測定値でこの桁数が問題になることはありません
+- **係数表の D4 の違い**：ツールは AIAG SPC マニュアルの値 n = 3 で 2.574、n = 5 で 2.114 を使っています。NIST の表は 2.575・2.115 です。正確な値（1 + 3d3/d2）は 2.574591…・2.114499… で、4 桁に丸めると n = 3 は NIST の 2.575、n = 5 は AIAG の 2.114 が正しい値です。どちらの表も 1 か所ずつ 4 桁目が丸めとずれています。どちらの値を使っても R 管理図の上方管理限界の差は 0.04〜0.05% なので、AIAG に合わせたままにしています
+- e-Handbook 6.1.6 の数値例は平均と標準偏差だけが示されているので、平均 16・標準偏差 2 になる 2 点を入れ、全体の標準偏差による指数（Pp・Ppk）で確かめています
+
 開発者向けの情報は [DEVELOPMENT.md](DEVELOPMENT.md) にあります。
 
 ## ライセンス
