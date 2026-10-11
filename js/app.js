@@ -31,7 +31,11 @@
   // 測定値・規格値など入力された値：10 桁に丸めて末尾の 0 を付けない
   const num = v => v == null || !Number.isFinite(v) ? '―' : String(+v.toPrecision(10));
   // ppm の表示
-  const fmtPpm = v => v == null || !Number.isFinite(v) ? '―' : v < 0.01 ? '< 0.01' : v < 10 ? v.toFixed(2) : v < 1000 ? v.toFixed(1) : Math.round(v).toLocaleString('ja-JP');
+  const fmtPpm = v => v == null || !Number.isFinite(v) ? '―' : v === 0 ? '0' : v < 0.01 ? '< 0.01' : v < 10 ? v.toFixed(2) : v < 1000 ? v.toFixed(1) : Math.round(v).toLocaleString('ja-JP');
+  // ppm を % に直して表示（1 % = 10,000 ppm）。有効数字 3 桁、fmtPpm で「< 0.01」になる範囲は「< 0.000001」
+  const fmtPct = v => v == null || !Number.isFinite(v) ? '―' : v === 0 ? '0' : v < 0.01 ? '< 0.000001' : (v / 1e4).toPrecision(3);
+  // ppm と % を併記
+  const ppmPct = v => v == null || !Number.isFinite(v) ? '―' : `${fmtPpm(v)} ppm（${fmtPct(v)} %）`;
   const fmtP = p => p == null ? '―' : p < 0.0001 ? p.toExponential(2) : p.toFixed(4);
   const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`; };
   const safeName = s => String(s).replace(/[\\/:*?"<>|\s]+/g, '_');
@@ -455,7 +459,7 @@
       for (const note of cap.notes) log.push(['warn', `${t}: ${note}`]);
       const sw = x.length >= 3 && x.length <= 5000 ? S.shapiro(x) : null;
       if (sw && sw.p < 0.05) log.push(['warn', `${t}: Shapiro-Wilk 検定で p = ${fmtP(sw.p)} < 0.05。正規分布でない可能性があり、工程能力指数の解釈に注意が必要です`]);
-      if (cap.observed.total) log.push(['warn', `${t}: 規格外れが ${cap.observed.total} 個あります（${fmtPpm(cap.observed.ppm)} ppm）`]);
+      if (cap.observed.total) log.push(['warn', `${t}: 規格外れが ${cap.observed.total} 個あります（${ppmPct(cap.observed.ppm)}）`]);
       // 管理図と異常判定（⑥）
       const cc = S.controlCharts(x, m, groups);
       const hits = { main: [], range: [], s: [] };
@@ -491,14 +495,14 @@
       `サブグループ：${gb ? `「${esc(gb)}」の値で分ける` : `連続する ${m} 個ずつ`}　全体の標準偏差：${st.capResult.ddof ? '標本（n−1）' : '母集団（n）'}　判定：${BASIS[judge.basis]}（◎ ${th(judge.ex)}／○ ${th(judge.gd)}／△ ${th(judge.wa)}）`;
     $('#capLog').innerHTML = log.map(([k, s]) => `<li class="${k}">${esc(s)}</li>`).join('');
     if (!rows.length) { $('#summary').innerHTML = ''; $('#capDetail').innerHTML = ''; if (scroll) $('#capResult').scrollIntoView({ behavior: 'smooth' }); return; }
-    $('#summary').innerHTML = `<table><thead><tr><th class="l">解析対象</th><th>n</th><th>平均</th><th>σ(群内)</th><th>σ(全体)</th><th>Cp</th><th>Cpk</th><th>Pp</th><th>Ppk</th><th>Ppk 95%信頼区間</th><th>推定不良率 ppm<br><small>群内 ／ 全体</small></th><th>規格外れ<br><small>実測</small></th><th>管理図<br><small>異常</small></th><th>判定（${BASIS[judge.basis]}）</th></tr></thead><tbody>` +
+    $('#summary').innerHTML = `<table><thead><tr><th class="l">解析対象</th><th>n</th><th>平均</th><th>σ(群内)</th><th>σ(全体)</th><th>Cp</th><th>Cpk</th><th>Pp</th><th>Ppk</th><th>Ppk 95%信頼区間</th><th>推定不良率<br><small>群内 ／ 全体</small></th><th>規格外れ<br><small>実測</small></th><th>管理図<br><small>異常</small></th><th>判定（${BASIS[judge.basis]}）</th></tr></thead><tbody>` +
       rows.map(r => {
         const c = r.cap, [j, used] = judgeValue(c, judge.basis), L = level(j);
         const nHits = r.hits.main.length + r.hits.range.length + r.hits.s.length;
         return `<tr><td class="l">${esc(r.t)}</td><td class="num">${c.n}</td><td class="num">${sig(c.mean)}</td><td class="num">${sig(c.sigmaWithin, 4)}</td><td class="num">${sig(c.sigmaOverall, 4)}</td>` +
           `<td class="num">${fmt(c.Cp)}</td><td class="num">${lvCell(c.Cpk)}</td><td class="num">${fmt(c.Pp)}</td><td class="num">${lvCell(c.Ppk)}</td>` +
           `<td class="num">${c.PpkCI[0] != null ? `${fmt(c.PpkCI[0])} ～ ${fmt(c.PpkCI[1])}` : '―'}</td>` +
-          `<td class="num">${fmtPpm(c.ppmWithin && c.ppmWithin.total)} ／ ${fmtPpm(c.ppmOverall && c.ppmOverall.total)}</td><td class="num">${c.observed.total} 個</td>` +
+          `<td class="num">${fmtPpm(c.ppmWithin && c.ppmWithin.total)} ／ ${fmtPpm(c.ppmOverall && c.ppmOverall.total)} ppm<br><small>${fmtPct(c.ppmWithin && c.ppmWithin.total)} ／ ${fmtPct(c.ppmOverall && c.ppmOverall.total)} %</small></td><td class="num">${c.observed.total} 個</td>` +
           `<td class="num">${st.capResult.rules ? (nHits ? `<span class="lv wa">${nHits} 件</span>` : 'なし') : '―'}</td>` +
           `<td>${L ? `<span class="lv ${L[0]}">${L[1]}${used !== BASIS[judge.basis] ? `（${used}）` : ''}</span>` : '―'}</td></tr>`;
       }).join('') + '</tbody></table>';
@@ -516,8 +520,8 @@
         ['Ppk', `${lvCell(c.Ppk)}<br><small>95%: ${c.PpkCI[0] != null ? `${fmt(c.PpkCI[0])}～${fmt(c.PpkCI[1])}` : '―'}</small>`],
         ['歪度／尖度', `${fmt(r.skew)}<br><small>${fmt(r.kurt)}</small>`], ['Shapiro-Wilk p', r.sw ? fmtP(r.sw.p) : '―'],
         ['必要データ数の目安', needN(r, judge)],
-        ...[['推定不良率（群内）', c.ppmWithin], ['推定不良率（全体）', c.ppmOverall]].map(([k, p]) => [k, p ? `${fmtPpm(p.total)} ppm<br><small>上 ${fmtPpm(p.upper)} ／ 下 ${fmtPpm(p.lower)}</small>` : '―']),
-        ['規格外れ（実測）', `${c.observed.total} 個<br><small>上 ${c.observed.upper ?? '―'} ／ 下 ${c.observed.lower ?? '―'}（${fmtPpm(c.observed.ppm)} ppm）</small>`],
+        ...[['推定不良率（群内）', c.ppmWithin], ['推定不良率（全体）', c.ppmOverall]].map(([k, p]) => [k, p ? `${fmtPpm(p.total)} ppm<br><small>${fmtPct(p.total)} %<br>上 ${fmtPpm(p.upper)} ／ 下 ${fmtPpm(p.lower)} ppm<br>上 ${fmtPct(p.upper)} ／ 下 ${fmtPct(p.lower)} %</small>` : '―']),
+        ['規格外れ（実測）', `${c.observed.total} 個<br><small>上 ${c.observed.upper ?? '―'} ／ 下 ${c.observed.lower ?? '―'}<br>${ppmPct(c.observed.ppm)}</small>`],
         ['サブグループ', gb ? `${c.subgroups} 組<br><small>「${esc(gb)}」で分ける</small>` : m === 1 ? '個別値' : `${c.subgroups} 組<br><small>${m} 個ずつ</small>`],
       ];
       const hitList = st.capResult.rules ? log.filter(([k, s]) => k === 'warn' && s.startsWith(`${r.t}: `) && /管理図 ルール/.test(s)).map(([, s]) => s.slice(r.t.length + 2)) : [];
@@ -546,13 +550,14 @@
     const R = st.capResult; if (!R || !R.rows.length) { toast('保存する結果がありません'); return; }
     const head = ['解析対象', 'サンプル数', '規格種別', '上限規格', '下限規格', '最大値', '最小値', '平均値', 'σ(群内)', 'σ(群内)の推定方法', '標準偏差(全体)',
       'Cp', 'Cpk', 'CPU', 'CPL', 'Pp', 'Pp_lower (95%)', 'Pp_upper (95%)', 'Ppk', 'Ppk_lower (95%, Bissell)', 'Ppk_upper (95%, Bissell)',
-      '推定不良率 群内 上側 (ppm)', '推定不良率 群内 下側 (ppm)', '推定不良率 群内 合計 (ppm)', '推定不良率 全体 上側 (ppm)', '推定不良率 全体 下側 (ppm)', '推定不良率 全体 合計 (ppm)',
-      '規格外れ 上側 (個)', '規格外れ 下側 (個)', '規格外れ (ppm)', 'サブグループ数', '管理図の異常 (件)', '判定に使った値', '判定', '必要データ数 (Ppk 95%下限 ≥ ○の基準)', '図面の表記', '基準値', '尖度', '歪度', 'Shapiro-Wilk p値'];
+      '推定不良率 群内 上側 (ppm)', '推定不良率 群内 下側 (ppm)', '推定不良率 群内 合計 (ppm)', '推定不良率 群内 合計 (%)', '推定不良率 全体 上側 (ppm)', '推定不良率 全体 下側 (ppm)', '推定不良率 全体 合計 (ppm)', '推定不良率 全体 合計 (%)',
+      '規格外れ 上側 (個)', '規格外れ 下側 (個)', '規格外れ (ppm)', '規格外れ (%)', 'サブグループ数', '管理図の異常 (件)', '判定に使った値', '判定', '必要データ数 (Ppk 95%下限 ≥ ○の基準)', '図面の表記', '基準値', '尖度', '歪度', 'Shapiro-Wilk p値'];
+    const toPct = v => v == null || !Number.isFinite(v) ? null : v / 1e4;  // ppm → %
     const rows = R.rows.map(r => {
       const c = r.cap, pw = c.ppmWithin || {}, po = c.ppmOverall || {}, [j, used] = judgeValue(c, R.judge.basis), L = level(j, R.judge);
       return [r.t, c.n, r.type, r.usl, r.lsl, r.max, r.min, c.mean, c.sigmaWithin, c.sigmaWithinMethod, c.sigmaOverall,
         c.Cp, c.Cpk, c.Cpu, c.Cpl, c.Pp, c.PpCI[0], c.PpCI[1], c.Ppk, c.PpkCI[0], c.PpkCI[1],
-        pw.upper, pw.lower, pw.total, po.upper, po.lower, po.total, c.observed.upper, c.observed.lower, c.observed.ppm,
+        pw.upper, pw.lower, pw.total, toPct(pw.total), po.upper, po.lower, po.total, toPct(po.total), c.observed.upper, c.observed.lower, c.observed.ppm, toPct(c.observed.ppm),
         c.subgroups, R.rules ? r.hits.main.length + r.hits.range.length + r.hits.s.length : null, used, L ? L[1] : null, r.reqN,
         ((st.sameSpec ? st.spec[st.targets[0]] : st.spec[r.t]) || {}).draw || null, r.nominal, r.kurt, r.skew, r.sw ? r.sw.p : null];
     });
