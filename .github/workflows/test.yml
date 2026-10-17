@@ -12,7 +12,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: pip install markdown openpyxl numpy scipy pandas
+      # markdown は版で太字の解釈が変わることがあるため固定する（上げるときは tools/build.py を作り直してから）
+      - run: pip install markdown==3.11.1 openpyxl numpy scipy pandas
       - name: 解説（docs/explanation.md）の埋め込みが最新か
         run: python tools/build.py && git diff --exit-code index.html
       - name: 統計計算・Excel 入出力のテスト（コミット済みの参照値）

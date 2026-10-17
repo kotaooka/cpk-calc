@@ -1,5 +1,5 @@
 # docs/explanation.md（解説）を HTML にして index.html の <!--EXPLAIN-START--> ～ <!--EXPLAIN-END--> に埋め込む
-#   pip install markdown
+#   pip install markdown==3.11.1  （CI と同じ版。版で太字の解釈が変わることがある）
 #   python tools/build.py
 from pathlib import Path
 import re, markdown
