@@ -8,6 +8,8 @@ md = (root / 'docs' / 'explanation.md').read_text(encoding='utf-8')
 # 原文は入れ子のリストを 2 桁字下げで書いている。Python-Markdown は 4 桁を前提にするので倍にする
 md = re.sub(r'^( +)', lambda m: m.group(1) * 2, md, flags=re.M)
 html = markdown.markdown(md, extensions=['tables', 'fenced_code', 'sane_lists'])
+# 見出しを 1 段下げる（# → h2）。ページの h1 は画面上部のツール名 1 つだけにするため
+html = re.sub(r'<(/?)h([1-5])>', lambda m: f'<{m.group(1)}h{int(m.group(2)) + 1}>', html)
 idx = root / 'index.html'
 s = idx.read_text(encoding='utf-8')
 new, n = re.subn(r'<!--EXPLAIN-START-->.*?<!--EXPLAIN-END-->', lambda m: '<!--EXPLAIN-START-->\n' + html + '\n<!--EXPLAIN-END-->', s, flags=re.S)
