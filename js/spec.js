@@ -42,7 +42,7 @@
     // 基準値 ± 公差
     if ((m = s.match(new RegExp(`^(${NUM})\\s*±\\s*(${NUM})$`)))) {
       const n = +m[1], t = Math.abs(+m[2]), d = Math.max(decimals(m[1]), decimals(m[2]));
-      if (t === 0) return { error: '公差が 0 です' };
+      if (t === 0) return { error: '公差が0です' };
       return { usl: round(n + t, d), lsl: round(n - t, d), nominal: n };
     }
 
