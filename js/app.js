@@ -238,7 +238,7 @@
       h += `<tr><td class="lab">${esc(T.rowLabels[i])}</td>` + T.cols.map(c => { const v = T.get(r, c); return `<td class="num">${v == null ? '' : esc(typeof v === 'number' ? num(v) : v)}</td>`; }).join('') + '</tr>';
     });
     $('#preview').innerHTML = h + '</tbody></table>';
-    $('#previewNote').textContent = `${T.rows.length} 行 × ${T.cols.length} 列（先頭 5 行を表示）` +
+    $('#previewNote').textContent = `${T.rows.length}行 × ${T.cols.length}列（先頭5行を表示）` +
       (T.specNames.length ? `。「${T.specNames.join('」「')}」を規格値として読み込み、データからは除きました` : '');
     // シートの規格値は、まだ入力されていない対象にだけ入れる
     for (const [l, v] of Object.entries(T.sheetSpec)) {
@@ -258,7 +258,7 @@
     if (L.includes(prevB) && prevB !== $('#tA').value) $('#tB').value = prevB; else if (L.length > 1) $('#tB').selectedIndex = $('#tA').selectedIndex === 1 ? 0 : 1;
     // ⑤ サブグループの分け方の候補（データの列・行の名前）
     if (!L.includes(st.groupBy)) st.groupBy = '';
-    $('#groupBy').innerHTML = `<option value="">連続する n 個ずつ</option>` + L.map(l => `<option value="${esc(l)}"${l === st.groupBy ? ' selected' : ''}>${st.dir === '列方向' ? '列' : '行'}「${esc(l)}」の値で分ける</option>`).join('');
+    $('#groupBy').innerHTML = `<option value="">連続するn個ずつ</option>` + L.map(l => `<option value="${esc(l)}"${l === st.groupBy ? ' selected' : ''}>${st.dir === '列方向' ? '列' : '行'}「${esc(l)}」の値で分ける</option>`).join('');
     syncGroupUi();
     renderAttrSetup();
   }
@@ -288,7 +288,7 @@
       const n = series(t).filter(x => x != null).length;
       const pr = v.draw && String(v.draw).trim() ? SP.parseTolerance(v.draw) : null;
       return `<tr><td class="l">${esc(t)}</td>` +
-        `<td class="draw l"><input type="text" data-t="${esc(t)}" data-k="draw" value="${esc(v.draw || '')}" placeholder="例：10 +0.1/-0.05" class="${pr && pr.error ? 'bad' : ''}"${dis} aria-label="${esc(t)} の図面の表記">` +
+        `<td class="draw l"><input type="text" data-t="${esc(t)}" data-k="draw" value="${esc(v.draw || '')}" placeholder="例：10 +0.1/-0.05" class="${pr && pr.error ? 'bad' : ''}"${dis} aria-label="${esc(t)}の図面の表記">` +
         `<span class="msg">${pr && pr.error ? esc(pr.error) : ''}</span></td>` +
         `<td><input class="num" type="text" inputmode="decimal" data-t="${esc(t)}" data-k="usl" value="${esc(v.usl)}"${dis}></td>` +
         `<td><input class="num" type="text" inputmode="decimal" data-t="${esc(t)}" data-k="lsl" value="${esc(v.lsl)}"${dis}></td><td class="num">${n}</td></tr>`;
@@ -336,7 +336,7 @@
   function addChart(container, name, render) {
     const div = document.createElement('div');
     div.className = 'chart';
-    div.innerHTML = render() + `<button class="btn small save" type="button">PNG で保存</button>`;
+    div.innerHTML = render() + `<button class="btn small save" type="button">PNGで保存</button>`;
     div.querySelector('.save').addEventListener('click', () => C.svgToPng(div.querySelector('svg'), `${stamp()}_${safeName(name)}.png`));
     container.appendChild(div);
     charts.push({ div, render });
@@ -347,7 +347,7 @@
   // 規格線・平均線
   function specLines(usl, lsl, mu) {
     const L = [];
-    if (mu != null) L.push({ type: 'vline', x: mu, color: 'var(--s2)', text: `平均 ${sig(mu)}` });
+    if (mu != null) L.push({ type: 'vline', x: mu, color: 'var(--s2)', text: `平均${sig(mu)}` });
     if (usl != null) L.push({ type: 'vline', x: usl, color: 'var(--ng)', width: 2, text: `USL ${num(usl)}` });
     if (lsl != null) L.push({ type: 'vline', x: lsl, color: 'var(--ng)', width: 2, text: `LSL ${num(lsl)}` });
     return L;
@@ -368,7 +368,7 @@
     const layers = [{ type: 'bars', data: bars, color: 'var(--s1)', label: '度数' }];
     layers.push({ type: 'line', data: curve(cap.sigmaOverall), color: 'var(--ink2)', width: 2, label: '全体（Pp/Ppk）' });
     if (cap.sigmaWithin) layers.push({ type: 'line', data: curve(cap.sigmaWithin), color: 'var(--s3)', width: 2, dash: '6 4', label: '群内（Cp/Cpk）' });
-    const nom = nominal != null ? [{ type: 'vline', x: nominal, color: 'var(--muted)', dash: '3 3', text: `基準値 ${num(nominal)}` }] : [];
+    const nom = nominal != null ? [{ type: 'vline', x: nominal, color: 'var(--muted)', dash: '3 3', text: `基準値${num(nominal)}` }] : [];
     return C.plot({ title: `工程能力図（${label}）`, xLabel: '値', yLabel: '度数', yZero: true, layers: [...layers, ...nom, ...specLines(usl, lsl, mu)] });
   }
   function qqChart(x, label) {
@@ -381,7 +381,7 @@
     const ends = [Math.min(...xs), Math.max(...xs)];
     return C.plot({ title: `QQプロット（${label}）`, xLabel: '理論分位点（標準正規分布）', yLabel: '測定値（小さい順）',
       layers: [{ type: 'points', data: xs.map((v, i) => [v, ys[i]]), color: 'var(--s1)', label: '測定値' },
-        { type: 'line', data: ends.map(v => [v, f.intercept + f.slope * v]), color: 'var(--ng)', label: `直線 R²=${f.r2.toFixed(4)}` }] });
+        { type: 'line', data: ends.map(v => [v, f.intercept + f.slope * v]), color: 'var(--ng)', label: `直線R²=${f.r2.toFixed(4)}` }] });
   }
   function densityChart(mu, s, usl, lsl, label) {
     const pts = []; for (let i = 0; i <= 200; i++) { const v = mu - 4 * s + 8 * s * i / 200; pts.push([v, S.normPdf(v, mu, s)]); }
@@ -414,8 +414,8 @@
   function needN(r, J) {
     const c = r.cap;
     if (c.Ppk == null) return '―';
-    if (r.reqN == null) return `届きません<br><small>Ppk ${fmt(c.Ppk)} が ${J.gd} 以下のため、データを増やしても下限は ${J.gd} 以上になりません</small>`;
-    return `${r.reqN.toLocaleString('ja-JP')} 個<br><small>${r.reqN <= c.n ? `足りています（今 ${c.n} 個）` : `あと ${(r.reqN - c.n).toLocaleString('ja-JP')} 個（今 ${c.n} 個）`}。95%下限 ≥ ${J.gd} に必要な数</small>`;
+    if (r.reqN == null) return `届きません<br><small>Ppk ${fmt(c.Ppk)}が${J.gd}以下のため、データを増やしても下限は${J.gd}以上になりません</small>`;
+    return `${r.reqN.toLocaleString('ja-JP')}個<br><small>${r.reqN <= c.n ? `足りています（今${c.n}個）` : `あと${(r.reqN - c.n).toLocaleString('ja-JP')}個（今${c.n}個）`}。95%下限 ≥ ${J.gd}に必要な数</small>`;
   }
   const BASIS = { Cpk: 'Cpk', Ppk: 'Ppk', PpkLow: 'Ppk 95%下限' };
   // 判定に使う値。Cpk を計算できないときは Ppk で代える
@@ -444,22 +444,22 @@
         // ⑤ 列（行）の値が同じデータを1つのサブグループにする（最初に出てきた順）
         const map = new Map(); let noKey = 0;
         raw.forEach((v, j) => { if (v == null) return; if (!keys[j]) { noKey++; return; } if (!map.has(keys[j])) map.set(keys[j], []); map.get(keys[j]).push(v); });
-        if (noKey) log.push(['warn', `${t}: 「${gb}」が空欄のデータ ${noKey} 件は解析から除外しました`]);
+        if (noKey) log.push(['warn', `${t}: 「${gb}」が空欄のデータ${noKey}件は解析から除外しました`]);
         groupKeys = [...map.keys()]; groups = [...map.values()]; x = groups.flat();
       }
-      if (x.length < raw.length) log.push(['info', `${t}: 空欄・数値でない ${raw.length - x.length} 件を除外しました（${raw.length} → ${x.length}）`]);
-      if (x.length < 2) { log.push(['err', `${t}: 有効なデータが ${x.length} 件のため解析できません`]); return; }
+      if (x.length < raw.length) log.push(['info', `${t}: 空欄・数値でない${raw.length - x.length}件を除外しました（${raw.length} → ${x.length}）`]);
+      if (x.length < 2) { log.push(['err', `${t}: 有効なデータが${x.length}件のため解析できません`]); return; }
       const sp = specOf(t, i), us = String(sp.usl).trim(), ls = String(sp.lsl).trim();
       if (!us && !ls) { log.push(['warn', `${t}: 規格値（上限・下限）が両方空欄のため解析しません`]); return; }
       const usl = us ? toNum(us) : null, lsl = ls ? toNum(ls) : null;
       if ((us && usl == null) || (ls && lsl == null)) { log.push(['err', `${t}: 規格値が数値ではありません`]); return; }
       if (usl != null && lsl != null && usl <= lsl) { log.push(['err', `${t}: 規格上限値（${usl}）が下限値（${lsl}）以下です`]); return; }
       const cap = S.capability(x, usl, lsl, m, ddof, 0.05, groups);
-      if (!(cap.sigmaOverall > 0)) { log.push(['err', `${t}: 標準偏差が 0 のため工程能力指数を計算できません`]); return; }
+      if (!(cap.sigmaOverall > 0)) { log.push(['err', `${t}: 標準偏差が0のため工程能力指数を計算できません`]); return; }
       for (const note of cap.notes) log.push(['warn', `${t}: ${note}`]);
       const sw = x.length >= 3 && x.length <= 5000 ? S.shapiro(x) : null;
-      if (sw && sw.p < 0.05) log.push(['warn', `${t}: Shapiro-Wilk 検定で p = ${fmtP(sw.p)} < 0.05。正規分布でない可能性があり、工程能力指数の解釈に注意が必要です`]);
-      if (cap.observed.total) log.push(['warn', `${t}: 規格外れが ${cap.observed.total} 個あります（${ppmPct(cap.observed.ppm)}）`]);
+      if (sw && sw.p < 0.05) log.push(['warn', `${t}: Shapiro-Wilk検定でp = ${fmtP(sw.p)} < 0.05。正規分布でない可能性があり、工程能力指数の解釈に注意が必要です`]);
+      if (cap.observed.total) log.push(['warn', `${t}: 規格外れが${cap.observed.total}個あります（${ppmPct(cap.observed.ppm)}）`]);
       // 管理図と異常判定（⑥）
       const cc = S.controlCharts(x, m, groups);
       const hits = { main: [], range: [], s: [] };
@@ -467,16 +467,16 @@
         hits.main = S.runRules(cc.main);
         hits.range = S.runRules(cc.range.sigma ? cc.range : { ...cc.range, sigma: cc.range.points.map(() => 1) }, [1]);
         if (cc.s) hits.s = S.runRules({ ...cc.s, sigma: cc.s.points.map(() => 1) }, [1]);
-        const name = { main: cc.type === 'I-MR' ? 'I 管理図' : 'X̄ 管理図', range: cc.type === 'I-MR' ? 'MR 管理図' : 'R 管理図', s: 's 管理図' };
+        const name = { main: cc.type === 'I-MR' ? 'I管理図' : 'X̄ 管理図', range: cc.type === 'I-MR' ? 'MR管理図' : 'R管理図', s: 's管理図' };
         // 点の呼び方：サブグループをキーで分けたときはその値、それ以外は番号
         const ptName = (chart, idx) => {
           const no = (cc[chart].start || 1) + idx;
           return groupKeys && cc.groupIndex ? `「${groupKeys[cc.groupIndex[idx]]}」` : `${no}`;
         };
         for (const ch of ['main', 'range', 's']) for (const h of hits[ch])
-          log.push(['warn', `${t}: ${name[ch]} ルール${h.rule}（${h.text}）: 点 ${ptName(ch, h.from)}${h.to > h.from ? `〜${ptName(ch, h.to)}` : ''}`]);
+          log.push(['warn', `${t}: ${name[ch]}ルール${h.rule}（${h.text}）: 点${ptName(ch, h.from)}${h.to > h.from ? `〜${ptName(ch, h.to)}` : ''}`]);
       }
-      if (cc && cc.k != null && groups && cc.k < groups.length) log.push(['info', `${t}: サイズが 2〜10 でないサブグループ ${groups.length - cc.k} 組は管理図に描いていません`]);
+      if (cc && cc.k != null && groups && cc.k < groups.length) log.push(['info', `${t}: サイズが2〜10でないサブグループ${groups.length - cc.k}組は管理図に描いていません`]);
       const reqN = cap.Ppk != null ? S.requiredN(cap.Ppk, J.gd, 0.05) : null;
       rows.push({ t, x, usl, lsl, nominal: specOf(t, i).nominal ?? null, reqN, cap, sw, cc, hits, groupKeys, max: Math.max(...x), min: Math.min(...x), skew: S.skewness(x), kurt: S.kurtosis(x),
         type: usl != null && lsl != null ? '両側' : usl != null ? '上側のみ' : '下側のみ' });
@@ -488,11 +488,11 @@
   function renderCap(scroll = true) {
     const { rows, log, m, gb, judge } = st.capResult;
     $('#capResult').hidden = false;
-    $('#judgeNote').textContent = `判定は ${BASIS[judge.basis]} で行います${judge.basis === 'Cpk' ? '（Cpk を計算できないときは Ppk）' : ''}。推定不良率は正規分布を仮定した値です。`;
+    $('#judgeNote').textContent = `判定は${BASIS[judge.basis]}で行います${judge.basis === 'Cpk' ? '（Cpkを計算できないときはPpk）' : ''}。推定不良率は正規分布を仮定した値です。`;
     const th = v => v.toFixed(2);
-    $('#legend').innerHTML = `<span class="lv ex">◎ ${th(judge.ex)} 以上</span><span class="lv gd">○ ${th(judge.gd)} 以上</span><span class="lv wa">△ ${th(judge.wa)} 以上</span><span class="lv ng">✕ ${th(judge.wa)} 未満</span>`;
+    $('#legend').innerHTML = `<span class="lv ex">◎ ${th(judge.ex)}以上</span><span class="lv gd">○ ${th(judge.gd)}以上</span><span class="lv wa">△ ${th(judge.wa)}以上</span><span class="lv ng">✕ ${th(judge.wa)}未満</span>`;
     $('#printHead').innerHTML = `<h1>工程能力解析</h1>ファイル：${esc(st.fileName)}　シート：${esc(st.wb.sheets[st.sheet].name)}　作成：${esc(new Date().toLocaleString('ja-JP'))}<br>` +
-      `サブグループ：${gb ? `「${esc(gb)}」の値で分ける` : `連続する ${m} 個ずつ`}　全体の標準偏差：${st.capResult.ddof ? '標本（n−1）' : '母集団（n）'}　判定：${BASIS[judge.basis]}（◎ ${th(judge.ex)}／○ ${th(judge.gd)}／△ ${th(judge.wa)}）`;
+      `サブグループ：${gb ? `「${esc(gb)}」の値で分ける` : `連続する${m}個ずつ`}　全体の標準偏差：${st.capResult.ddof ? '標本（n−1）' : '母集団（n）'}　判定：${BASIS[judge.basis]}（◎ ${th(judge.ex)}／○ ${th(judge.gd)}／△ ${th(judge.wa)}）`;
     $('#capLog').innerHTML = log.map(([k, s]) => `<li class="${k}">${esc(s)}</li>`).join('');
     if (!rows.length) { $('#summary').innerHTML = ''; $('#capDetail').innerHTML = ''; if (scroll) $('#capResult').scrollIntoView({ behavior: 'smooth' }); return; }
     $('#summary').innerHTML = `<table><thead><tr><th class="l">解析対象</th><th>n</th><th>平均</th><th>σ(群内)</th><th>σ(全体)</th><th>Cp</th><th>Cpk</th><th>Pp</th><th>Ppk</th><th>Ppk 95%信頼区間</th><th>推定不良率<br><small>群内 ／ 全体</small></th><th>規格外れ<br><small>実測</small></th><th>管理図<br><small>異常</small></th><th>判定（${BASIS[judge.basis]}）</th></tr></thead><tbody>` +
@@ -502,8 +502,8 @@
         return `<tr><td class="l">${esc(r.t)}</td><td class="num">${c.n}</td><td class="num">${sig(c.mean)}</td><td class="num">${sig(c.sigmaWithin, 4)}</td><td class="num">${sig(c.sigmaOverall, 4)}</td>` +
           `<td class="num">${fmt(c.Cp)}</td><td class="num">${lvCell(c.Cpk)}</td><td class="num">${fmt(c.Pp)}</td><td class="num">${lvCell(c.Ppk)}</td>` +
           `<td class="num">${c.PpkCI[0] != null ? `${fmt(c.PpkCI[0])} ～ ${fmt(c.PpkCI[1])}` : '―'}</td>` +
-          `<td class="num">${fmtPpm(c.ppmWithin && c.ppmWithin.total)} ／ ${fmtPpm(c.ppmOverall && c.ppmOverall.total)} ppm<br><small>${fmtPct(c.ppmWithin && c.ppmWithin.total)} ／ ${fmtPct(c.ppmOverall && c.ppmOverall.total)} %</small></td><td class="num">${c.observed.total} 個</td>` +
-          `<td class="num">${st.capResult.rules ? (nHits ? `<span class="lv wa">${nHits} 件</span>` : 'なし') : '―'}</td>` +
+          `<td class="num">${fmtPpm(c.ppmWithin && c.ppmWithin.total)} ／ ${fmtPpm(c.ppmOverall && c.ppmOverall.total)} ppm<br><small>${fmtPct(c.ppmWithin && c.ppmWithin.total)} ／ ${fmtPct(c.ppmOverall && c.ppmOverall.total)} %</small></td><td class="num">${c.observed.total}個</td>` +
+          `<td class="num">${st.capResult.rules ? (nHits ? `<span class="lv wa">${nHits}件</span>` : 'なし') : '―'}</td>` +
           `<td>${L ? `<span class="lv ${L[0]}">${L[1]}${used !== BASIS[judge.basis] ? `（${used}）` : ''}</span>` : '―'}</td></tr>`;
       }).join('') + '</tbody></table>';
     const det = $('#capDetail'); det.innerHTML = '';
@@ -520,9 +520,9 @@
         ['Ppk', `${lvCell(c.Ppk)}<br><small>95%: ${c.PpkCI[0] != null ? `${fmt(c.PpkCI[0])}～${fmt(c.PpkCI[1])}` : '―'}</small>`],
         ['歪度／尖度', `${fmt(r.skew)}<br><small>${fmt(r.kurt)}</small>`], ['Shapiro-Wilk p', r.sw ? fmtP(r.sw.p) : '―'],
         ['必要データ数の目安', needN(r, judge)],
-        ...[['推定不良率（群内）', c.ppmWithin], ['推定不良率（全体）', c.ppmOverall]].map(([k, p]) => [k, p ? `${fmtPpm(p.total)} ppm<br><small>${fmtPct(p.total)} %<br>上 ${fmtPpm(p.upper)} ／ 下 ${fmtPpm(p.lower)} ppm<br>上 ${fmtPct(p.upper)} ／ 下 ${fmtPct(p.lower)} %</small>` : '―']),
-        ['規格外れ（実測）', `${c.observed.total} 個<br><small>上 ${c.observed.upper ?? '―'} ／ 下 ${c.observed.lower ?? '―'}<br>${ppmPct(c.observed.ppm)}</small>`],
-        ['サブグループ', gb ? `${c.subgroups} 組<br><small>「${esc(gb)}」で分ける</small>` : m === 1 ? '個別値' : `${c.subgroups} 組<br><small>${m} 個ずつ</small>`],
+        ...[['推定不良率（群内）', c.ppmWithin], ['推定不良率（全体）', c.ppmOverall]].map(([k, p]) => [k, p ? `${fmtPpm(p.total)} ppm<br><small>${fmtPct(p.total)} %<br>上${fmtPpm(p.upper)} ／ 下${fmtPpm(p.lower)} ppm<br>上${fmtPct(p.upper)} ／ 下${fmtPct(p.lower)} %</small>` : '―']),
+        ['規格外れ（実測）', `${c.observed.total}個<br><small>上${c.observed.upper ?? '―'} ／ 下${c.observed.lower ?? '―'}<br>${ppmPct(c.observed.ppm)}</small>`],
+        ['サブグループ', gb ? `${c.subgroups}組<br><small>「${esc(gb)}」で分ける</small>` : m === 1 ? '個別値' : `${c.subgroups}組<br><small>${m}個ずつ</small>`],
       ];
       const hitList = st.capResult.rules ? log.filter(([k, s]) => k === 'warn' && s.startsWith(`${r.t}: `) && /管理図 ルール/.test(s)).map(([, s]) => s.slice(r.t.length + 2)) : [];
       sec.innerHTML = `<h3>${esc(r.t)}</h3><dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd class="num">${v}</dd></div>`).join('')}</dl>` +
@@ -535,12 +535,12 @@
       const cc = r.cc, H = r.hits;
       if (!cc) continue;
       if (cc.type === 'I-MR') {
-        if (sh.xbar) addChart(g, `i_${r.t}`, () => ctrlChart(`I 管理図（${r.t}）`, 'データ点', '値', cc.main, H.main));
-        if (sh.r) addChart(g, `mr_${r.t}`, () => ctrlChart(`MR 管理図（${r.t}）`, 'データ点（2番目以降）', '移動範囲', cc.range, H.range));
+        if (sh.xbar) addChart(g, `i_${r.t}`, () => ctrlChart(`I管理図（${r.t}）`, 'データ点', '値', cc.main, H.main));
+        if (sh.r) addChart(g, `mr_${r.t}`, () => ctrlChart(`MR管理図（${r.t}）`, 'データ点（2番目以降）', '移動範囲', cc.range, H.range));
       } else {
         if (sh.xbar) addChart(g, `xbar_${r.t}`, () => ctrlChart(`X̄ 管理図（${r.t}）`, 'サブグループ番号', 'サブグループ平均', cc.main, H.main));
-        if (sh.r) addChart(g, `r_${r.t}`, () => ctrlChart(`R 管理図（${r.t}）`, 'サブグループ番号', '範囲', cc.range, H.range));
-        if (sh.s) addChart(g, `s_${r.t}`, () => ctrlChart(`s 管理図（${r.t}）`, 'サブグループ番号', '標準偏差', cc.s, H.s));
+        if (sh.r) addChart(g, `r_${r.t}`, () => ctrlChart(`R管理図（${r.t}）`, 'サブグループ番号', '範囲', cc.range, H.range));
+        if (sh.s) addChart(g, `s_${r.t}`, () => ctrlChart(`s管理図（${r.t}）`, 'サブグループ番号', '標準偏差', cc.s, H.s));
       }
     }
     if (scroll) $('#capResult').scrollIntoView({ behavior: 'smooth' });
@@ -562,9 +562,9 @@
         ((st.sameSpec ? st.spec[st.targets[0]] : st.spec[r.t]) || {}).draw || null, r.nominal, r.kurt, r.skew, r.sw ? r.sw.p : null];
     });
     const cond = [['項目', '値'], ['ファイル', st.fileName], ['シート', st.wb.sheets[st.sheet].name], ['計算対象の方向', st.dir],
-      ['サブグループ', R.gb ? `「${R.gb}」の値で分ける` : `連続する ${R.m} 個ずつ`],
+      ['サブグループ', R.gb ? `「${R.gb}」の値で分ける` : `連続する${R.m}個ずつ`],
       ['全体の標準偏差', R.ddof ? '標本標準偏差（n−1）' : '母集団標準偏差（n）'], ['判定に使う値', BASIS[R.judge.basis]],
-      ['判定基準', `◎ ${R.judge.ex} 以上 ／ ○ ${R.judge.gd} 以上 ／ △ ${R.judge.wa} 以上`], ['管理図の異常判定ルール', R.rules ? 'JIS Z 9020-2 の 8 ルール（R・MR・s は管理限界外のみ）' : '使わない'],
+      ['判定基準', `◎ ${R.judge.ex}以上 ／ ○ ${R.judge.gd}以上 ／ △ ${R.judge.wa}以上`], ['管理図の異常判定ルール', R.rules ? 'JIS Z 9020-2の8ルール（R・MR・sは管理限界外のみ）' : '使わない'],
       ['作成', new Date().toLocaleString('ja-JP')]];
     download(X.writeXlsx([{ name: '工程能力', rows: [head, ...rows] }, { name: 'ログ', rows: [['区分', '内容'], ...R.log.map(([k, s]) => [{ info: '情報', warn: '注意', err: 'エラー' }[k], s])] }, { name: '条件', rows: cond }]),
       `${stamp()}_results.xlsx`, XLSX_TYPE);
@@ -605,7 +605,7 @@
     }
     if (st.wb) rebuild();
     const missing = (s.selected_targets || []).filter(t => !st.targets.includes(String(t)));
-    toast(missing.length ? `設定を読み込みました（今のデータにない解析対象 ${missing.length} 件は外しました）` : '設定を読み込みました');
+    toast(missing.length ? `設定を読み込みました（今のデータにない解析対象${missing.length}件は外しました）` : '設定を読み込みました');
   });
 
   // ---------- 2群の検定・相関 ----------
@@ -616,29 +616,29 @@
     const ra = series(a), rb = series(b), log = [];
     const doF = $('#doF').checked, doT = $('#doT').checked, kind = $('#tKind').value, doOv = $('#doOverlay').checked, doCorr = $('#doCorr').checked;
     const alphaF = +$('#alphaF').value, alphaT = +$('#alphaT').value;
-    if (!(alphaF > 0 && alphaF < 1) || !(alphaT > 0 && alphaT < 1)) { toast('有意水準は 0 と 1 の間で入力してください'); return; }
+    if (!(alphaF > 0 && alphaF < 1) || !(alphaT > 0 && alphaT < 1)) { toast('有意水準は0と1の間で入力してください'); return; }
     const pairs = []; for (let i = 0; i < Math.max(ra.length, rb.length); i++) if (ra[i] != null && rb[i] != null) pairs.push([ra[i], rb[i]]);
     const paired = doT && kind === 'paired';
     let x, y;
     if (paired) {
       x = pairs.map(p => p[0]); y = pairs.map(p => p[1]);
-      log.push(['info', `対応ありの t 検定のため、両方に値がある ${pairs.length} 組で計算します（F 検定も同じ組で計算します）`]);
-      if (pairs.length < 2) { toast('対応ありの t 検定に使える組が 2 組未満です'); return; }
+      log.push(['info', `対応ありのt検定のため、両方に値がある${pairs.length}組で計算します（F検定も同じ組で計算します）`]);
+      if (pairs.length < 2) { toast('対応ありのt検定に使える組が2組未満です'); return; }
     } else { x = ra.filter(v => v != null); y = rb.filter(v => v != null); }
-    if (x.length < 2 || y.length < 2) { toast('どちらかの対象のデータが 2 件未満です'); return; }
+    if (x.length < 2 || y.length < 2) { toast('どちらかの対象のデータが2件未満です'); return; }
     const R = { a, b, kind, alphaF, alphaT, n1: x.length, n2: y.length, m1: S.mean(x), m2: S.mean(y), v1: S.variance(x), v2: S.variance(y), x, y, log };
     if (doF) {
       const f = S.fTest(x, y);
-      if (!f) log.push(['warn', '分散が 0 のため F 検定を行いません']); else R.f = f;
+      if (!f) log.push(['warn', '分散が0のためF検定を行いません']); else R.f = f;
     }
     if (doT) {
       const t = S.tTest(x, y, kind);
-      if (!Number.isFinite(t.t)) log.push(['warn', '標準偏差が 0 のため t 検定を行いません']); else R.t = t;
+      if (!Number.isFinite(t.t)) log.push(['warn', '標準偏差が0のためt検定を行いません']); else R.t = t;
     }
     if (doCorr) {
-      if (pairs.length < 3) log.push(['warn', '両方に値がある組が 3 組未満のため、相関を計算しません']);
+      if (pairs.length < 3) log.push(['warn', '両方に値がある組が3組未満のため、相関を計算しません']);
       else { R.corr = S.correlation(pairs.map(p => p[0]), pairs.map(p => p[1])); R.corr.n = pairs.length; R.pairs = pairs; }
-      if (!paired && (pairs.length < x.length || pairs.length < y.length)) log.push(['info', `相関は両方に値がある ${pairs.length} 組で計算しました`]);
+      if (!paired && (pairs.length < x.length || pairs.length < y.length)) log.push(['info', `相関は両方に値がある${pairs.length}組で計算しました`]);
     }
     R.overlay = doOv;
     st.testResult = R;
@@ -650,11 +650,11 @@
     const R = st.testResult;
     $('#testResult').hidden = false;
     const card = (title, rows, verdict) => `<div class="res"><h3>${title}</h3>${verdict || ''}<dl class="kv">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd class="num">${v}</dd></div>`).join('')}</dl></div>`;
-    const vd = (p, a) => `<div class="verdict ${p < a ? 'sig' : 'nsig'}">${p < a ? '有意差あり' : '有意差なし'}<span class="hint">（有意水準 ${a}）</span></div>`;
-    let h = card('データ', [[`n（${esc(R.a)}）`, R.n1], [`n（${esc(R.b)}）`, R.n2], ['平均 1', sig(R.m1)], ['平均 2', sig(R.m2)], ['分散 1', sig(R.v1, 4)], ['分散 2', sig(R.v2, 4)]]);
-    if (R.f) h += card('F 検定（分散の比較）', [['F 値', fmt(R.f.F, 4)], ['自由度', `(${R.f.dfn}, ${R.f.dfd})`], ['p 値（両側）', fmtP(R.f.p)]], vd(R.f.p, R.alphaF));
-    if (R.t) h += card(`t 検定（${kindName[R.kind]}）`, [['t 値', fmt(R.t.t, 4)], ['自由度', R.kind === 'welch' ? fmt(R.t.df, 2) : R.t.df], ['p 値（両側）', fmtP(R.t.p)], ['平均の差（1−2）', sig(R.m1 - R.m2)]], vd(R.t.p, R.alphaT));
-    if (R.corr) h += card('相関', [['相関係数 r', fmt(R.corr.r, 4)], ['決定係数 R²', fmt(R.corr.r2, 4)], ['回帰式', `y = ${sig(R.corr.slope, 4)}x ${R.corr.intercept < 0 ? '−' : '+'} ${sig(Math.abs(R.corr.intercept), 4)}`], ['組数', R.corr.n]]);
+    const vd = (p, a) => `<div class="verdict ${p < a ? 'sig' : 'nsig'}">${p < a ? '有意差あり' : '有意差なし'}<span class="hint">（有意水準${a}）</span></div>`;
+    let h = card('データ', [[`n（${esc(R.a)}）`, R.n1], [`n（${esc(R.b)}）`, R.n2], ['平均1', sig(R.m1)], ['平均2', sig(R.m2)], ['分散1', sig(R.v1, 4)], ['分散2', sig(R.v2, 4)]]);
+    if (R.f) h += card('F検定（分散の比較）', [['F値', fmt(R.f.F, 4)], ['自由度', `(${R.f.dfn}, ${R.f.dfd})`], ['p値（両側）', fmtP(R.f.p)]], vd(R.f.p, R.alphaF));
+    if (R.t) h += card(`t検定（${kindName[R.kind]}）`, [['t値', fmt(R.t.t, 4)], ['自由度', R.kind === 'welch' ? fmt(R.t.df, 2) : R.t.df], ['p値（両側）', fmtP(R.t.p)], ['平均の差（1−2）', sig(R.m1 - R.m2)]], vd(R.t.p, R.alphaT));
+    if (R.corr) h += card('相関', [['相関係数r', fmt(R.corr.r, 4)], ['決定係数R²', fmt(R.corr.r2, 4)], ['回帰式', `y = ${sig(R.corr.slope, 4)}x ${R.corr.intercept < 0 ? '−' : '+'} ${sig(Math.abs(R.corr.intercept), 4)}`], ['組数', R.corr.n]]);
     $('#testCards').innerHTML = h;
     $('#testLog').innerHTML = R.log.map(([k, s]) => `<li class="${k}">${esc(s)}</li>`).join('');
     const g = $('#testCharts'); g.innerHTML = '';
@@ -677,18 +677,18 @@
       const df = R.t.df, lo = Math.min(S.tPpf(0.001, df), R.t.t * 1.1), hi = Math.max(S.tPpf(0.999, df), R.t.t * 1.1);
       const pts = []; for (let i = 0; i <= 300; i++) { const v = lo + (hi - lo) * i / 300; pts.push([v, S.tPdf(v, df)]); }
       const crit = S.tPpf(1 - R.alphaT / 2, df);
-      return C.plot({ title: `t 分布（自由度 ${R.kind === 'welch' ? fmt(df, 2) : df}）`, xLabel: 't 値', yLabel: '確率密度', yZero: true, legend: false,
+      return C.plot({ title: `t分布（自由度${R.kind === 'welch' ? fmt(df, 2) : df}）`, xLabel: 't値', yLabel: '確率密度', yZero: true, legend: false,
         layers: [{ type: 'area', data: pts, color: 'var(--s4)' },
-          { type: 'vline', x: -crit, color: 'var(--muted)', dash: '5 4', text: `棄却限界 −${fmt(crit)}` }, { type: 'vline', x: crit, color: 'var(--muted)', dash: '5 4', text: `棄却限界 ${fmt(crit)}` },
+          { type: 'vline', x: -crit, color: 'var(--muted)', dash: '5 4', text: `棄却限界 −${fmt(crit)}` }, { type: 'vline', x: crit, color: 'var(--muted)', dash: '5 4', text: `棄却限界${fmt(crit)}` },
           { type: 'vline', x: R.t.t, color: 'var(--ng)', width: 2, text: `t = ${fmt(R.t.t)}（p = ${fmtP(R.t.p)}）` }] });
     });
     if (R.f) addChart(g, 'f_distribution', () => {
       const { F, dfn, dfd } = R.f, hi = Math.max(S.fPpf(0.999, dfn, dfd), F * 1.1);
       const pts = []; for (let i = 1; i <= 300; i++) { const v = hi * i / 300; pts.push([v, S.fPdf(v, dfn, dfd)]); }
       const crit = S.fPpf(1 - R.alphaF / 2, dfn, dfd);
-      return C.plot({ title: `F 分布（自由度 ${dfn}, ${dfd}）`, xLabel: 'F 値', yLabel: '確率密度', yZero: true, legend: false, x: [0, hi],
+      return C.plot({ title: `F分布（自由度${dfn}, ${dfd}）`, xLabel: 'F値', yLabel: '確率密度', yZero: true, legend: false, x: [0, hi],
         layers: [{ type: 'area', data: pts, color: 'var(--s2)' },
-          { type: 'vline', x: crit, color: 'var(--muted)', dash: '5 4', text: `棄却限界 ${fmt(crit)}` },
+          { type: 'vline', x: crit, color: 'var(--muted)', dash: '5 4', text: `棄却限界${fmt(crit)}` },
           { type: 'vline', x: F, color: 'var(--ng)', width: 2, text: `F = ${fmt(F)}（p = ${fmtP(R.f.p)}）` }] });
     });
     $('#testResult').scrollIntoView({ behavior: 'smooth' });
@@ -704,10 +704,10 @@
 
   // ---------- 計数値の管理図 ----------
   const ATTR = {
-    p: { name: 'p 管理図（不良率）', d: '不良数', n: '検査数', y: '不良率', hint: '群ごとの不良率 = 不良数 ÷ 検査数 を打点します。検査数が群ごとに違ってもよく、管理限界は群ごとの検査数で変わります。' },
-    np: { name: 'np 管理図（不良数）', d: '不良数', n: '検査数', y: '不良数', hint: '不良数をそのまま打点します。検査数がすべての群で同じときに使います（違うときは p 管理図）。' },
-    u: { name: 'u 管理図（単位あたりの欠点数）', d: '欠点数', n: '単位数', y: '単位あたりの欠点数', hint: '単位あたりの欠点数 = 欠点数 ÷ 単位数（面積・長さ・台数など）を打点します。単位数が群ごとに違ってもよく、管理限界は単位数で変わります。' },
-    c: { name: 'c 管理図（欠点数）', d: '欠点数', n: '', y: '欠点数', hint: '欠点数をそのまま打点します。調べる大きさ（面積・台数など）がすべての群で同じときに使います（違うときは u 管理図）。' },
+    p: { name: 'p管理図（不良率）', d: '不良数', n: '検査数', y: '不良率', hint: '群ごとの不良率 = 不良数 ÷ 検査数 を打点します。検査数が群ごとに違ってもよく、管理限界は群ごとの検査数で変わります。' },
+    np: { name: 'np管理図（不良数）', d: '不良数', n: '検査数', y: '不良数', hint: '不良数をそのまま打点します。検査数がすべての群で同じときに使います（違うときはp管理図）。' },
+    u: { name: 'u管理図（単位あたりの欠点数）', d: '欠点数', n: '単位数', y: '単位あたりの欠点数', hint: '単位あたりの欠点数 = 欠点数 ÷ 単位数（面積・長さ・台数など）を打点します。単位数が群ごとに違ってもよく、管理限界は単位数で変わります。' },
+    c: { name: 'c管理図（欠点数）', d: '欠点数', n: '', y: '欠点数', hint: '欠点数をそのまま打点します。調べる大きさ（面積・台数など）がすべての群で同じときに使います（違うときはu管理図）。' },
   };
   st.attr = { kind: 'p', d: '', n: '', nConst: '', rules: true };
   function renderAttrSetup() {
@@ -765,8 +765,8 @@
       if (dRaw[i] == null || nRaw[i] == null) { skipped++; continue; }
       d.push(dRaw[i]); n.push(nRaw[i]); rowNo.push(i);
     }
-    if (skipped) log.push(['warn', `${K.d}か${K.n || '値'}が空欄の ${skipped} 群を除きました。`]);
-    if (d.length < 2) return err('群が 2 つ以上必要です。');
+    if (skipped) log.push(['warn', `${K.d}か${K.n || '値'}が空欄の${skipped}群を除きました。`]);
+    if (d.length < 2) return err('群が2つ以上必要です。');
     // 群の名前：行の名前（列方向のとき）が番号だけなら、ロット番号など文字の列があればその値を使う
     let names = st.dir === '列方向' ? st.table.rowLabels : st.table.colLabels;
     if (names.every(v => /^\d+$/.test(String(v)))) {
@@ -774,26 +774,26 @@
       if (txt) names = seriesRaw(txt).map(v => v == null ? '' : String(v));
       else names = names.map(() => '');
     }
-    const name = i => names[rowNo[i]] || `群 ${i + 1}`;
+    const name = i => names[rowNo[i]] || `群${i + 1}`;
     for (let i = 0; i < d.length; i++) {
-      if (!(Number.isInteger(d[i]) && d[i] >= 0)) return err(`${name(i)} の${K.d}「${num(d[i])}」は 0 以上の整数ではありません。`);
-      if (A.kind !== 'c' && !(n[i] > 0)) return err(`${name(i)} の${K.n}「${num(n[i])}」は正の値ではありません。`);
-      if ((A.kind === 'p' || A.kind === 'np') && !Number.isInteger(n[i])) return err(`${name(i)} の検査数「${num(n[i])}」は整数ではありません。`);
-      if ((A.kind === 'p' || A.kind === 'np') && d[i] > n[i]) return err(`${name(i)} の不良数が検査数より多くなっています。`);
+      if (!(Number.isInteger(d[i]) && d[i] >= 0)) return err(`${name(i)}の${K.d}「${num(d[i])}」は0以上の整数ではありません。`);
+      if (A.kind !== 'c' && !(n[i] > 0)) return err(`${name(i)}の${K.n}「${num(n[i])}」は正の値ではありません。`);
+      if ((A.kind === 'p' || A.kind === 'np') && !Number.isInteger(n[i])) return err(`${name(i)}の検査数「${num(n[i])}」は整数ではありません。`);
+      if ((A.kind === 'p' || A.kind === 'np') && d[i] > n[i]) return err(`${name(i)}の不良数が検査数より多くなっています。`);
     }
-    if (A.kind === 'np' && n.some(v => v !== n[0])) return err('検査数が群ごとに違うので np 管理図は使えません。p 管理図を選んでください。');
+    if (A.kind === 'np' && n.some(v => v !== n[0])) return err('検査数が群ごとに違うのでnp管理図は使えません。p管理図を選んでください。');
     const c = S.attrChart(A.kind, d, A.kind === 'c' ? null : n);
-    if (!c) return err(A.kind === 'p' && d.every((v, i) => v === n[i]) ? 'すべて不良なので管理図を描けません。' : `${K.d}がすべて 0 なので管理図を描けません（中心線が 0 になり、管理限界が決まりません）。`);
+    if (!c) return err(A.kind === 'p' && d.every((v, i) => v === n[i]) ? 'すべて不良なので管理図を描けません。' : `${K.d}がすべて0なので管理図を描けません（中心線が0になり、管理限界が決まりません）。`);
     // 二項分布・ポアソン分布の正規近似の目安
     if (A.kind === 'p' || A.kind === 'np') {
       const pb = A.kind === 'p' ? c.center : c.pbar, mn = Math.min(...n);
-      if (mn * pb < 5) log.push(['warn', `検査数 × 平均の不良率（最小 ${sig(mn * pb, 3)}）が 5 未満です。不良数の分布が左右非対称になるので、正規近似の管理限界と異常判定ルールは目安として見てください。`]);
+      if (mn * pb < 5) log.push(['warn', `検査数 × 平均の不良率（最小${sig(mn * pb, 3)}）が5未満です。不良数の分布が左右非対称になるので、正規近似の管理限界と異常判定ルールは目安として見てください。`]);
     } else if (A.kind === 'c' ? c.center < 5 : Math.min(...n) * c.center < 5) {
-      log.push(['warn', `欠点数の平均が 5 未満です。欠点数の分布が左右非対称になるので、正規近似の管理限界と異常判定ルールは目安として見てください。`]);
+      log.push(['warn', `欠点数の平均が5未満です。欠点数の分布が左右非対称になるので、正規近似の管理限界と異常判定ルールは目安として見てください。`]);
     }
-    if (c.lcl.some(v => v === 0)) log.push(['info', `下側管理限界が 0 になる群があります。その群では、${A.kind === 'c' || A.kind === 'u' ? '欠点' : '不良'}の減少（改善）を管理限界外として検出できません。`]);
+    if (c.lcl.some(v => v === 0)) log.push(['info', `下側管理限界が0になる群があります。その群では、${A.kind === 'c' || A.kind === 'u' ? '欠点' : '不良'}の減少（改善）を管理限界外として検出できません。`]);
     const hits = A.rules ? S.runRules(c) : S.runRules(c, [1]);
-    st.attrResult = { kind: A.kind, c, d, n, names: d.map((_, i) => name(i)), hits, rules: A.rules, dLabel: A.d, nLabel: A.kind === 'c' ? '' : (A.n || `一定 ${num(n[0])}`), log };
+    st.attrResult = { kind: A.kind, c, d, n, names: d.map((_, i) => name(i)), hits, rules: A.rules, dLabel: A.d, nLabel: A.kind === 'c' ? '' : (A.n || `一定${num(n[0])}`), log };
     renderAttr();
   });
   function renderAttr() {
@@ -802,11 +802,11 @@
     const out = c.points.filter((v, i) => v > c.ucl[i] + 1e-12 || v < c.lcl[i] - 1e-12).length;
     const kv = [['管理図', K.name], ['群の数', c.points.length]];
     if (R.kind !== 'c') kv.push([`${K.n}の合計`, num(c.sumN)]);
-    kv.push([`${K.d}の合計`, num(c.sumD)], ['中心線 CL', attrFmt(R.kind, c.center)], ['UCL', range(R.kind, c.ucl)], ['LCL', range(R.kind, c.lcl)], ['管理限界外の群', out]);
+    kv.push([`${K.d}の合計`, num(c.sumD)], ['中心線CL', attrFmt(R.kind, c.center)], ['UCL', range(R.kind, c.ucl)], ['LCL', range(R.kind, c.lcl)], ['管理限界外の群', out]);
     if (R.kind === 'np') kv.push(['平均の不良率', `${sig(c.pbar * 100, 4)} %`]);
     $('#attrKv').innerHTML = kv.map(([k, v]) => `<div><dt>${k}</dt><dd class="num">${v}</dd></div>`).join('');
-    const nm = i => R.names[i] && R.names[i] !== `群 ${i + 1}` ? `${i + 1}（${R.names[i]}）` : String(i + 1);
-    $('#attrHits').innerHTML = R.hits.map(h => `<li>! ${esc(`ルール${h.rule}：${h.text}　群 ${h.from === h.to ? nm(h.from) : `${nm(h.from)}〜${nm(h.to)}`}`)}</li>`).join('');
+    const nm = i => R.names[i] && R.names[i] !== `群${i + 1}` ? `${i + 1}（${R.names[i]}）` : String(i + 1);
+    $('#attrHits').innerHTML = R.hits.map(h => `<li>! ${esc(`ルール${h.rule}：${h.text}　群${h.from === h.to ? nm(h.from) : `${nm(h.from)}〜${nm(h.to)}`}`)}</li>`).join('');
     const log = R.log.slice();
     if (!R.hits.length) log.push(['info', R.rules ? '異常判定ルールに当てはまる点はありません。' : '管理限界の外に出た点はありません。']);
     if (R.kind === 'p' || R.kind === 'u') log.push(['info', `管理限界は群ごとの${K.n}で変わります（${K.n}が少ない群ほど広い）。`]);
@@ -830,7 +830,7 @@
     };
     const head = ['群の番号', '群の名前', K.d, ...(R.kind === 'c' ? [] : [K.n]), K.y, '中心線', 'UCL', 'LCL', '異常判定'];
     const rows = c.points.map((v, i) => [i + 1, R.names[i] ?? '', R.d[i], ...(R.kind === 'c' ? [] : [R.n[i]]), v, c.cl[i], c.ucl[i], c.lcl[i], judge(i)]);
-    const cond = [['項目', '値'], ['管理図', K.name], [`${K.d}の列`, R.dLabel], ...(R.kind === 'c' ? [] : [[K.n, R.nLabel]]), ['異常判定ルール', R.rules ? 'JIS Z 9020-2 の 8 ルール' : '管理限界外のみ']];
+    const cond = [['項目', '値'], ['管理図', K.name], [`${K.d}の列`, R.dLabel], ...(R.kind === 'c' ? [] : [[K.n, R.nLabel]]), ['異常判定ルール', R.rules ? 'JIS Z 9020-2の8ルール' : '管理限界外のみ']];
     download(X.writeXlsx([{ name: '管理図', rows: [head, ...rows] }, { name: '条件', rows: cond }]), `${stamp()}_${R.kind}_chart.xlsx`, XLSX_TYPE);
   });
 
@@ -838,10 +838,10 @@
   st.prop = [{ name: '', n: '', x: '' }, { name: '', n: '', x: '' }];
   function renderPropRows() {
     $('#propBody').innerHTML = st.prop.map((r, i) =>
-      `<tr><td class="l"><input type="text" data-i="${i}" data-k="name" value="${esc(r.name)}" placeholder="群 ${i + 1}" aria-label="群 ${i + 1} の名前"></td>` +
-      `<td><input class="num" type="text" inputmode="numeric" data-i="${i}" data-k="n" value="${esc(r.n)}" aria-label="群 ${i + 1} の検査数"></td>` +
-      `<td><input class="num" type="text" inputmode="numeric" data-i="${i}" data-k="x" value="${esc(r.x)}" aria-label="群 ${i + 1} の不良数"></td>` +
-      `<td>${st.prop.length > 2 ? `<button class="btn small" type="button" data-del="${i}" aria-label="群 ${i + 1} を削除">削除</button>` : ''}</td></tr>`).join('');
+      `<tr><td class="l"><input type="text" data-i="${i}" data-k="name" value="${esc(r.name)}" placeholder="群${i + 1}" aria-label="群${i + 1}の名前"></td>` +
+      `<td><input class="num" type="text" inputmode="numeric" data-i="${i}" data-k="n" value="${esc(r.n)}" aria-label="群${i + 1}の検査数"></td>` +
+      `<td><input class="num" type="text" inputmode="numeric" data-i="${i}" data-k="x" value="${esc(r.x)}" aria-label="群${i + 1}の不良数"></td>` +
+      `<td>${st.prop.length > 2 ? `<button class="btn small" type="button" data-del="${i}" aria-label="群${i + 1}を削除">削除</button>` : ''}</td></tr>`).join('');
   }
   renderPropRows();
   $('#propBody').addEventListener('input', e => { const t = e.target; if (t.dataset.i == null) return; st.prop[+t.dataset.i][t.dataset.k] = t.value; t.classList.remove('bad'); });
@@ -878,27 +878,27 @@
       if (String(r.n).trim() === '' && String(r.x).trim() === '') return;
       const n = toNum(r.n), x = toNum(r.x);
       const mark = k => { const el = $(`#propBody input[data-i="${i}"][data-k="${k}"]`); if (el) el.classList.add('bad'); };
-      if (!(Number.isInteger(n) && n > 0)) { mark('n'); bad = bad || `群 ${i + 1} の検査数は 1 以上の整数で入れてください。`; return; }
-      if (!(Number.isInteger(x) && x >= 0 && x <= n)) { mark('x'); bad = bad || `群 ${i + 1} の不良数は 0 以上・検査数以下の整数で入れてください。`; return; }
-      groups.push({ name: String(r.name).trim() || `群 ${i + 1}`, n, x });
+      if (!(Number.isInteger(n) && n > 0)) { mark('n'); bad = bad || `群${i + 1}の検査数は1以上の整数で入れてください。`; return; }
+      if (!(Number.isInteger(x) && x >= 0 && x <= n)) { mark('x'); bad = bad || `群${i + 1}の不良数は0以上・検査数以下の整数で入れてください。`; return; }
+      groups.push({ name: String(r.name).trim() || `群${i + 1}`, n, x });
     });
     if (bad) return err(bad);
-    if (groups.length < 2) return err('2 つ以上の群に検査数と不良数を入れてください。');
+    if (groups.length < 2) return err('2つ以上の群に検査数と不良数を入れてください。');
     groups.forEach(g => { g.p = g.x / g.n; g.ci = S.propCI(g.x, g.n, alpha); });
     const R = { groups, alpha, log };
     if (groups.length === 2) {
       const [a, b] = groups;
       R.two = S.twoProp(a.x, a.n, b.x, b.n, alpha);
-      if (a.x + b.x === 0) return err('どちらの群も不良が 0 個なので比較できません。');
+      if (a.x + b.x === 0) return err('どちらの群も不良が0個なので比較できません。');
       if (a.x + b.x === a.n + b.n) return err('どちらの群もすべて不良なので比較できません。');
       // 判定に使う検定：期待度数が 5 以上なら z 検定、5 未満の欄があれば Fisher の正確検定
       R.useFisher = R.two.minExpected < 5;
-      log.push(R.useFisher ? ['warn', `期待度数の最小が ${sig(R.two.minExpected, 3)} で 5 未満なので、正規近似の z 検定は使わず、Fisher の正確検定で判定しました。`]
-        : ['info', `期待度数の最小は ${sig(R.two.minExpected, 3)} で 5 以上なので、z 検定で判定しました（Fisher の正確検定も参考に表示）。`]);
+      log.push(R.useFisher ? ['warn', `期待度数の最小が${sig(R.two.minExpected, 3)}で5未満なので、正規近似のz検定は使わず、Fisherの正確検定で判定しました。`]
+        : ['info', `期待度数の最小は${sig(R.two.minExpected, 3)}で5以上なので、z検定で判定しました（Fisherの正確検定も参考に表示）。`]);
     } else {
       R.chi = S.propChi2(groups.map(g => g.x), groups.map(g => g.n));
-      if (!R.chi) return err('すべての群で不良が 0 個（またはすべて不良）なので比較できません。');
-      if (R.chi.smallCells) log.push(['warn', `期待度数が 5 未満の欄が ${R.chi.smallCells} / ${R.chi.cells} あります（最小 ${sig(R.chi.minExpected, 3)}）。χ² 検定の近似が悪くなるので、群をまとめるか、検査数を増やしてください。`]);
+      if (!R.chi) return err('すべての群で不良が0個（またはすべて不良）なので比較できません。');
+      if (R.chi.smallCells) log.push(['warn', `期待度数が5未満の欄が${R.chi.smallCells} / ${R.chi.cells}あります（最小${sig(R.chi.minExpected, 3)}）。χ² 検定の近似が悪くなるので、群をまとめるか、検査数を増やしてください。`]);
     }
     st.propResult = R;
     renderProp();
@@ -907,24 +907,24 @@
   function renderProp() {
     const R = st.propResult, cl = Math.round((1 - R.alpha) * 100);
     $('#propResult').hidden = false;
-    $('#propTable').innerHTML = `<table><thead><tr><th class="l">群</th><th>検査数</th><th>不良数</th><th>不良率</th><th>${cl}% 信頼区間（下限）</th><th>${cl}% 信頼区間（上限）</th></tr></thead><tbody>` +
+    $('#propTable').innerHTML = `<table><thead><tr><th class="l">群</th><th>検査数</th><th>不良数</th><th>不良率</th><th>${cl}%信頼区間（下限）</th><th>${cl}%信頼区間（上限）</th></tr></thead><tbody>` +
       R.groups.map(g => `<tr><td class="l">${esc(g.name)}</td><td class="num">${g.n}</td><td class="num">${g.x}</td><td class="num">${pct(g.p)}</td><td class="num">${pct(g.ci[0])}</td><td class="num">${pct(g.ci[1])}</td></tr>`).join('') + '</tbody></table>';
     const card = (title, rows, verdict) => `<div class="res"><h3>${title}</h3>${verdict || ''}<dl class="kv">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd class="num">${v}</dd></div>`).join('')}</dl></div>`;
-    const vd = (p, a, used = true) => used ? `<div class="verdict ${p < a ? 'sig' : 'nsig'}">${p < a ? '差がある' : '差があるとは言えない'}<span class="hint">（有意水準 ${a}）</span></div>` : '<div class="hint">参考（判定には使っていません）</div>';
+    const vd = (p, a, used = true) => used ? `<div class="verdict ${p < a ? 'sig' : 'nsig'}">${p < a ? '差がある' : '差があるとは言えない'}<span class="hint">（有意水準${a}）</span></div>` : '<div class="hint">参考（判定には使っていません）</div>';
     let h = '';
     if (R.two) {
       const T = R.two, [a, b] = R.groups;
-      h += card('不良率の差', [[`差（${esc(a.name)} − ${esc(b.name)}）`, pct(T.diff)], [`${cl}% 信頼区間`, `${pct(T.diffCI[0])} 〜 ${pct(T.diffCI[1])}`], ['併合した不良率', pct(T.pooled)]]);
-      h += card('z 検定（正規近似）', [['z 値', fmt(T.z, 4)], ['p 値（両側）', fmtP(T.pZ)]], vd(T.pZ, R.alpha, !R.useFisher));
-      h += card('Fisher の正確検定', [['p 値（両側）', fmtP(T.pFisher)]], vd(T.pFisher, R.alpha, R.useFisher));
+      h += card('不良率の差', [[`差（${esc(a.name)} − ${esc(b.name)}）`, pct(T.diff)], [`${cl}%信頼区間`, `${pct(T.diffCI[0])} 〜 ${pct(T.diffCI[1])}`], ['併合した不良率', pct(T.pooled)]]);
+      h += card('z検定（正規近似）', [['z値', fmt(T.z, 4)], ['p値（両側）', fmtP(T.pZ)]], vd(T.pZ, R.alpha, !R.useFisher));
+      h += card('Fisherの正確検定', [['p値（両側）', fmtP(T.pFisher)]], vd(T.pFisher, R.alpha, R.useFisher));
     } else {
       const T = R.chi;
-      h += card(`χ² 検定（${R.groups.length} 群の一様性）`, [['χ² 値', fmt(T.chi2, 4)], ['自由度', T.df], ['p 値', fmtP(T.p)], ['全体の不良率', pct(T.pooled)]], vd(T.p, R.alpha));
+      h += card(`χ² 検定（${R.groups.length}群の一様性）`, [['χ² 値', fmt(T.chi2, 4)], ['自由度', T.df], ['p値', fmtP(T.p)], ['全体の不良率', pct(T.pooled)]], vd(T.p, R.alpha));
     }
     $('#propCards').innerHTML = h;
     const log = R.log.slice();
-    log.push(['info', `各群の信頼区間は Clopper-Pearson 法（正確法）${R.two ? '、差の信頼区間は Newcombe の方法（Wilson 区間の組み合わせ）' : ''}です。`]);
-    if (!R.two) log.push(['info', '3 群以上の χ² 検定は「どこかの群に差がある」かを見るものです。どの群とどの群に差があるかは、2 群ずつ比べてください（何度も比べると、偶然の差を差と判定しやすくなる点に注意）。']);
+    log.push(['info', `各群の信頼区間はClopper-Pearson法（正確法）${R.two ? '、差の信頼区間はNewcombeの方法（Wilson区間の組み合わせ）' : ''}です。`]);
+    if (!R.two) log.push(['info', '3群以上のχ² 検定は「どこかの群に差がある」かを見るものです。どの群とどの群に差があるかは、2群ずつ比べてください（何度も比べると、偶然の差を差と判定しやすくなる点に注意）。']);
     $('#propLog').innerHTML = log.map(([k, s]) => `<li class="${k}">${esc(s)}</li>`).join('');
     const g = $('#propCharts'); g.innerHTML = '';
     charts.splice(0, charts.length, ...charts.filter(x => x.div.isConnected));
@@ -932,8 +932,8 @@
       const layers = R.groups.map((q, i) => ({ type: 'line', data: [[i + 1, q.ci[0] * 100], [i + 1, q.ci[1] * 100]], color: 'var(--s1)', width: 3 }));
       layers.push({ type: 'points', data: R.groups.map((q, i) => [i + 1, q.p * 100]), color: 'var(--ng)', r: 4.5, label: '不良率' });
       const pooled = R.two ? R.two.pooled : R.chi.pooled;
-      layers.push({ type: 'hline', y: pooled * 100, color: 'var(--muted)', dash: '5 4', text: `全体 ${pct(pooled, 3)}` });
-      layers.push({ type: 'line', data: [], color: 'var(--s1)', width: 3, label: `${cl}% 信頼区間` });
+      layers.push({ type: 'hline', y: pooled * 100, color: 'var(--muted)', dash: '5 4', text: `全体${pct(pooled, 3)}` });
+      layers.push({ type: 'line', data: [], color: 'var(--s1)', width: 3, label: `${cl}%信頼区間` });
       const k = R.groups.length;
       const xl = R.groups.map((q, i) => `${i + 1}: ${q.name}`).join('　');
       return C.plot({ title: '群ごとの不良率', xLabel: xl.length <= 60 ? xl : '群の番号（名前は上の表のとおり）', yLabel: '不良率 [%]', yZero: true, x: [0.5, k + 0.5], xTicks: R.groups.map((q, i) => i + 1), layers });
@@ -1070,15 +1070,15 @@
   function renderPlanner() {
     const c = parseFloat($('#pnC').value), t = parseFloat($('#pnT').value), a = parseFloat($('#pnA').value);
     const out = $('#pnOut');
-    if (!(c > 0) || !(t > 0)) { out.innerHTML = '<span class="hint">見込みの Ppk と示したい値を入れてください</span>'; return; }
+    if (!(c > 0) || !(t > 0)) { out.innerHTML = '<span class="hint">見込みのPpkと示したい値を入れてください</span>'; return; }
     const n = S.requiredN(c, t, a);
     let h = n == null
-      ? `<div><span class="big">届きません</span>　見込みの Ppk（${c}）が示したい値（${t}）以下のため、データを増やしても下限は ${t} 以上になりません。</div>`
-      : `<div>必要なデータ数：<span class="big">${n.toLocaleString('ja-JP')}</span> 個　<span class="hint">（Ppk が ${c} のとき、${Math.round((1 - a) * 100)}% 信頼区間の下限が ${t} 以上になる最小の数）</span></div>`;
+      ? `<div><span class="big">届きません</span>　見込みのPpk（${c}）が示したい値（${t}）以下のため、データを増やしても下限は${t}以上になりません。</div>`
+      : `<div>必要なデータ数：<span class="big">${n.toLocaleString('ja-JP')}</span> 個　<span class="hint">（Ppkが${c}のとき、${Math.round((1 - a) * 100)}%信頼区間の下限が${t}以上になる最小の数）</span></div>`;
     // 見込みの Ppk ごとの早見表
     let cs = [1.4, 1.5, 1.67, 1.8, 2.0, 2.33, 2.5, 3.0].filter(v => v > t + 1e-9).slice(0, 6);
     if (cs.length < 3) cs = [1.1, 1.2, 1.33, 1.5].map(k => +(t * k).toFixed(2));
-    h += '<table><thead><tr><th class="l">見込みの Ppk</th>' + cs.map(v => `<th>${v.toFixed(2)}</th>`).join('') + '</tr></thead><tbody><tr><td class="l">必要なデータ数</td>' +
+    h += '<table><thead><tr><th class="l">見込みのPpk</th>' + cs.map(v => `<th>${v.toFixed(2)}</th>`).join('') + '</tr></thead><tbody><tr><td class="l">必要なデータ数</td>' +
       cs.map(v => `<td class="num">${(S.requiredN(v, t, a) ?? '―').toLocaleString('ja-JP')}</td>`).join('') + '</tr></tbody></table>';
     out.innerHTML = h;
   }

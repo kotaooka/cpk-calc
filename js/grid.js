@@ -24,11 +24,11 @@
       while (model.rows.length < MIN_ROWS) model.rows.push(model.cols.map(() => ''));
     }
     function colStat(c) {
-      if (model.cols[c].type === 'text') { const n = model.rows.filter(r => String(r[c]).trim()).length; return n ? `${n} 件` : ''; }
+      if (model.cols[c].type === 'text') { const n = model.rows.filter(r => String(r[c]).trim()).length; return n ? `${n}件` : ''; }
       const v = model.rows.map(r => toNum(r[c])).filter(x => x != null);
       if (!v.length) return '';
       const m = v.reduce((a, b) => a + b, 0) / v.length;
-      return `n=${v.length}　平均 ${+m.toPrecision(6)}`;
+      return `n=${v.length}　平均${+m.toPrecision(6)}`;
     }
     const isBad = (c, v) => model.cols[c].type === 'num' && String(v).trim() !== '' && toNum(v) == null;
 
@@ -36,7 +36,7 @@
       fixShape();
       const C = model.cols;
       let h = '<table class="grid"><thead><tr><th class="rn">#</th>' + C.map((col, c) =>
-        `<th><div class="gh"><input type="text" data-name="${c}" value="${esc(col.name)}" aria-label="項目名 ${c + 1}">` +
+        `<th><div class="gh"><input type="text" data-name="${c}" value="${esc(col.name)}" aria-label="項目名${c + 1}">` +
         `<div class="gsub"><select data-type="${c}" aria-label="列の種類"><option value="num"${col.type === 'num' ? ' selected' : ''}>数値</option><option value="text"${col.type === 'text' ? ' selected' : ''}>文字</option></select>` +
         `<button type="button" class="gdel" data-del="${c}" title="この列を削除" aria-label="この列を削除">✕</button></div>` +
         `<span class="gstat" data-stat="${c}">${esc(colStat(c))}</span></div></th>`).join('') + '</tr></thead><tbody>';

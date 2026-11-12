@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>工程能力指数（Cp・Cpk）計算ツール｜Pp・Ppk・管理図・ヒストグラム</title>
-<meta name="description" content="Excel の測定データから Cp・Cpk・Pp・Ppk、管理図、ヒストグラム、F検定・t検定・相関をブラウザだけで計算する">
+<meta name="description" content="Excelの測定データからCp・Cpk・Pp・Ppk、管理図、ヒストグラム、F検定・t検定・相関をブラウザだけで計算する">
 <link rel="canonical" href="https://kotaooka.github.io/cpk-calc/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QC Workbench">
 <meta property="og:title" content="工程能力指数（Cp・Cpk）計算ツール｜Pp・Ppk・管理図・ヒストグラム">
-<meta property="og:description" content="Excel の測定データから Cp・Cpk・Pp・Ppk、管理図、ヒストグラム、F検定・t検定・相関をブラウザだけで計算する">
+<meta property="og:description" content="Excelの測定データからCp・Cpk・Pp・Ppk、管理図、ヒストグラム、F検定・t検定・相関をブラウザだけで計算する">
 <meta property="og:url" content="https://kotaooka.github.io/cpk-calc/">
 <meta property="og:image" content="https://kotaooka.github.io/cpk-calc/og.png">
 <meta property="og:image:width" content="1200">
@@ -59,7 +59,7 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; }
+html, body { text-autospace: normal; margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.6; -webkit-text-size-adjust: 100%; }
 .num, .mono, input[type="number"], input.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 0 56px; }
@@ -260,10 +260,10 @@ footer a { color: inherit; }
       <div class="seg src-seg" id="srcSeg" role="tablist"><button type="button" data-v="file" aria-pressed="true">ファイル・貼り付け</button><button type="button" data-v="grid" aria-pressed="false">画面で入力</button></div>
       <div id="srcFile">
       <div class="drop" id="drop">
-        <strong>Excel（.xlsx）または CSV ファイル</strong>をここにドラッグするか、
+        <strong>Excel（.xlsx）またはCSVファイル</strong>をここにドラッグするか、
         <label class="btn small" style="display:inline-block">ファイルを選択<input type="file" id="fileIn" accept=".xlsx,.xlsm,.csv,.tsv,.txt" hidden></label>
-        <div class="hint" style="margin-top:6px">旧形式の .xls は読めません。Excel で .xlsx に保存し直してください。</div>
-        <div class="paste-hint"><strong>Excel でコピーした範囲を、このページで Ctrl+V（⌘+V）で貼り付け</strong>ても読み込めます。
+        <div class="hint" style="margin-top:6px">旧形式の .xlsは読めません。Excelで .xlsxに保存し直してください。</div>
+        <div class="paste-hint"><strong>Excelでコピーした範囲を、このページでCtrl+V（⌘+V）で貼り付け</strong>ても読み込めます。
           <button class="btn small" id="pasteBtn" type="button">クリップボードから貼り付け</button></div>
         <div style="margin-top:8px"><button class="btn small" id="sampleBtn" type="button">サンプルデータで試す</button></div>
       </div>
@@ -279,7 +279,7 @@ footer a { color: inherit; }
           <span class="lbl">計算対象の方向</span>
           <span class="seg" id="dirSeg"><button type="button" data-v="列方向" aria-pressed="true">列方向</button><button type="button" data-v="行方向" aria-pressed="false">行方向</button></span>
         </div>
-        <div class="hint" style="margin-top:4px">チェックしないときは、先頭行を列の名前、先頭列を行の名前として使います。チェックしたときは Excel の列記号（A, B…）・行番号を名前にします。<br>
+        <div class="hint" style="margin-top:4px">チェックしないときは、先頭行を列の名前、先頭列を行の名前として使います。チェックしたときはExcelの列記号（A, B…）・行番号を名前にします。<br>
           名前が「USL」「LSL」（または「規格上限」「規格下限」「上限」「下限」）の行があれば、規格値として読み込み、データからは除きます（行方向のときは列）。</div>
         <div class="tbl-wrap" id="preview"></div>
         <div class="hint" id="previewNote"></div>
@@ -289,13 +289,13 @@ footer a { color: inherit; }
       <div id="srcGrid" hidden>
         <div class="row grid-tools">
           <button class="btn small" id="gAddCol" type="button">＋ 項目を追加</button>
-          <button class="btn small" id="gAddRows" type="button">＋ 10 行</button>
-          <button class="btn small" id="gSave" type="button">Excel で保存</button>
+          <button class="btn small" id="gAddRows" type="button">＋ 10行</button>
+          <button class="btn small" id="gSave" type="button">Excelで保存</button>
           <button class="btn small danger" id="gClear" type="button">入力を消す</button>
           <label class="chk"><input type="checkbox" id="liveUpdate" checked>入力に合わせて結果を更新</label>
           <span class="hint saved" id="gSaved"></span>
         </div>
-        <div class="hint">Enter で下へ、Tab で右へ移動します。最後の行で Enter を押すと行が増えます。Excel でコピーした範囲もそのまま貼り付けられます（1行目が文字なら項目名になります）。<br>
+        <div class="hint">Enterで下へ、Tabで右へ移動します。最後の行でEnterを押すと行が増えます。Excelでコピーした範囲もそのまま貼り付けられます（1行目が文字なら項目名になります）。<br>
           項目名の下の「文字」を選ぶと、ロット番号などを入れる列になります（「サブグループの分け方」で使えます）。入力した値はこの端末のブラウザに自動で保存されます。</div>
         <div class="grid-wrap" id="gridWrap"></div>
       </div>
@@ -319,32 +319,32 @@ footer a { color: inherit; }
     <div class="box" id="capOpts" hidden>
       <h2><span class="step">3</span>解析オプション</h2>
       <div class="row">
-        <label class="field"><span class="lbl">サブグループの分け方</span><select id="groupBy"><option value="">連続する n 個ずつ</option></select></label>
+        <label class="field"><span class="lbl">サブグループの分け方</span><select id="groupBy"><option value="">連続するn個ずつ</option></select></label>
         <label class="field"><span class="lbl">サブグループサイズ</span>
           <select id="subgroup"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
         <div class="field"><span class="lbl">全体の標準偏差（Pp/Ppk）の計算方法</span>
           <span class="seg" id="stdSeg"><button type="button" data-v="サンプル標準偏差" aria-pressed="true">標本標準偏差（n−1）</button><button type="button" data-v="母集団標準偏差" aria-pressed="false">母集団標準偏差（n）</button></span></div>
       </div>
-      <div class="hint" style="margin-top:6px">サブグループサイズは管理図の種類（1: I-MR、2以上: X̄-R・s）と、Cp/Cpk に使う群内変動 σ の推定（1: MR̄/d2、2以上: R̄/d2）に使います。データは測定（生産）順に並べてください。<br>
+      <div class="hint" style="margin-top:6px">サブグループサイズは管理図の種類（1: I-MR、2以上: X̄-R・s）と、Cp/Cpkに使う群内変動σの推定（1: MR̄/d2、2以上: R̄/d2）に使います。データは測定（生産）順に並べてください。<br>
         ロット番号や日付の列（行方向のときは行）を選ぶと、その値が同じデータを1つのサブグループにします。サイズが揃わなくても計算でき、管理限界はサブグループごとのサイズで変わります。</div>
       <div class="row" style="margin-top:12px">
-        <label class="field"><span class="lbl">判定に使う値</span><select id="judgeBasis"><option value="Cpk">Cpk（群内変動）</option><option value="Ppk">Ppk（全体変動）</option><option value="PpkLow">Ppk の 95% 信頼区間の下限</option></select></label>
+        <label class="field"><span class="lbl">判定に使う値</span><select id="judgeBasis"><option value="Cpk">Cpk（群内変動）</option><option value="Ppk">Ppk（全体変動）</option><option value="PpkLow">Ppkの95%信頼区間の下限</option></select></label>
         <label class="field"><span class="lbl">◎ 非常に良好</span><input type="number" id="thEx" class="num" value="1.67" step="0.01" min="0" style="width:6em"></label>
         <label class="field"><span class="lbl">○ 良好</span><input type="number" id="thGd" class="num" value="1.33" step="0.01" min="0" style="width:6em"></label>
         <label class="field"><span class="lbl">△ 要注意</span><input type="number" id="thWa" class="num" value="1.00" step="0.01" min="0" style="width:6em"></label>
       </div>
-      <div class="hint" style="margin-top:4px">それぞれの値以上で判定します。客先の要求値に合わせて変えてください。データ数が少ないときは「Ppk の 95% 信頼区間の下限」で判定すると、過大評価を避けられます。</div>
+      <div class="hint" style="margin-top:4px">それぞれの値以上で判定します。客先の要求値に合わせて変えてください。データ数が少ないときは「Ppkの95%信頼区間の下限」で判定すると、過大評価を避けられます。</div>
       <div class="row" style="margin-top:12px">
         <span class="lbl">出力するグラフ</span>
         <label class="chk"><input type="checkbox" data-show="hist" checked>工程能力図（ヒストグラム＋分布曲線）</label>
         <label class="chk"><input type="checkbox" data-show="qq" checked>QQプロット</label>
         <label class="chk"><input type="checkbox" data-show="density">確率密度分布</label>
-        <label class="chk"><input type="checkbox" data-show="xbar" checked>X̄／I 管理図</label>
-        <label class="chk"><input type="checkbox" data-show="r" checked>R／MR 管理図</label>
-        <label class="chk"><input type="checkbox" data-show="s" checked>s 管理図</label>
+        <label class="chk"><input type="checkbox" data-show="xbar" checked>X̄／I管理図</label>
+        <label class="chk"><input type="checkbox" data-show="r" checked>R／MR管理図</label>
+        <label class="chk"><input type="checkbox" data-show="s" checked>s管理図</label>
       </div>
       <div class="row" style="margin-top:8px">
-        <label class="chk"><input type="checkbox" id="runRules" checked>管理図の異常判定ルールを使う（JIS Z 9020-2 の 8 ルール。R・MR・s 管理図は管理限界外のみ）</label>
+        <label class="chk"><input type="checkbox" id="runRules" checked>管理図の異常判定ルールを使う（JIS Z 9020-2の8ルール。R・MR・s管理図は管理限界外のみ）</label>
       </div>
       <div class="row" style="margin-top:16px">
         <button class="btn primary" id="runCap" type="button">解析する</button>
@@ -355,19 +355,19 @@ footer a { color: inherit; }
     <details class="box planner" id="planner">
       <summary><h2 style="display:inline">必要なデータ数の目安</h2><span class="hint">　測定を始める前の計画に</span></summary>
       <div class="row" style="margin-top:10px">
-        <label class="field"><span class="lbl">見込みの Ppk</span><input type="number" id="pnC" class="num" value="1.67" step="0.01" min="0" style="width:7em"></label>
+        <label class="field"><span class="lbl">見込みのPpk</span><input type="number" id="pnC" class="num" value="1.67" step="0.01" min="0" style="width:7em"></label>
         <label class="field"><span class="lbl">示したい値（下限）</span><input type="number" id="pnT" class="num" value="1.33" step="0.01" min="0" style="width:7em"></label>
         <label class="field"><span class="lbl">信頼区間</span><select id="pnA"><option value="0.10">90%（両側）</option><option value="0.05" selected>95%（両側）</option><option value="0.01">99%（両側）</option></select></label>
       </div>
       <div class="plan-out" id="pnOut"></div>
-      <div class="hint">Ppk の信頼区間（Bissell の近似）の下限が「示したい値」以上になる最小のデータ数です。見込みの Ppk が示したい値に近いほど、多くのデータが必要になります。判定を「Ppk の 95% 信頼区間の下限」で行う場合の計画に使えます。</div>
+      <div class="hint">Ppkの信頼区間（Bissellの近似）の下限が「示したい値」以上になる最小のデータ数です。見込みのPpkが示したい値に近いほど、多くのデータが必要になります。判定を「Ppkの95%信頼区間の下限」で行う場合の計画に使えます。</div>
     </details>
     <div class="box" id="capResult" hidden>
       <h2>解析結果</h2>
       <div class="print-head" id="printHead"></div>
       <div class="row no-print" style="justify-content:space-between">
         <span class="hint" id="judgeNote"></span>
-        <span class="row"><button class="btn small" id="printCap" type="button">印刷・PDF で保存</button><button class="btn small" id="dlCap" type="button">結果を Excel で保存</button></span>
+        <span class="row"><button class="btn small" id="printCap" type="button">印刷・PDFで保存</button><button class="btn small" id="dlCap" type="button">結果をExcelで保存</button></span>
       </div>
       <div class="tbl-wrap" id="summary"></div>
       <div class="legend" id="legend"></div>
@@ -381,8 +381,8 @@ footer a { color: inherit; }
     <div class="box" id="testSetup" hidden>
       <h2><span class="step">2</span>検定の設定</h2>
       <div class="row">
-        <label class="field"><span class="lbl">対象 1</span><select id="tA"></select></label>
-        <label class="field"><span class="lbl">対象 2</span><select id="tB"></select></label>
+        <label class="field"><span class="lbl">対象1</span><select id="tA"></select></label>
+        <label class="field"><span class="lbl">対象2</span><select id="tB"></select></label>
       </div>
       <div class="row" style="margin-top:14px">
         <label class="chk"><input type="checkbox" id="doF" checked>F検定（分散の比較）</label>
@@ -397,12 +397,12 @@ footer a { color: inherit; }
         <label class="chk"><input type="checkbox" id="doOverlay">正規分布の重ね描き</label>
         <label class="chk"><input type="checkbox" id="doCorr">相関係数・散布図</label>
       </div>
-      <div class="hint" style="margin-top:6px">対応ありの t 検定と相関は、同じ行（列方向のとき）の値どうしを組にし、どちらかが空欄の組は除きます。</div>
+      <div class="hint" style="margin-top:6px">対応ありのt検定と相関は、同じ行（列方向のとき）の値どうしを組にし、どちらかが空欄の組は除きます。</div>
       <div class="row" style="margin-top:16px"><button class="btn primary" id="runTest" type="button">検定する</button></div>
     </div>
     <div class="box" id="testResult" hidden>
       <h2>検定結果</h2>
-      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printTest" type="button">印刷・PDF で保存</button><button class="btn small" id="dlTest" type="button">結果を Excel で保存</button></div>
+      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printTest" type="button">印刷・PDFで保存</button><button class="btn small" id="dlTest" type="button">結果をExcelで保存</button></div>
       <div class="res-grid" id="testCards" style="margin-top:8px"></div>
       <ul class="log" id="testLog"></ul>
       <div class="charts" id="testCharts" style="margin-top:12px"></div>
@@ -413,7 +413,7 @@ footer a { color: inherit; }
   <section id="tab-attr" data-panel="attr" hidden>
     <div class="box" id="attrSetup">
       <h2><span class="step">2</span>計数値の管理図</h2>
-      <div class="hint" id="attrNoData">上の「データ」に、群（ロット・日など）ごとの<strong>不良数（欠点数）</strong>と<strong>検査数</strong>を 1 行 1 群で並べて読み込んでください。検査数が毎回同じなら、不良数の列だけでもかまいません。</div>
+      <div class="hint" id="attrNoData">上の「データ」に、群（ロット・日など）ごとの<strong>不良数（欠点数）</strong>と<strong>検査数</strong>を1行1群で並べて読み込んでください。検査数が毎回同じなら、不良数の列だけでもかまいません。</div>
       <div id="attrForm" hidden>
         <div class="row">
           <div class="field"><span class="lbl">管理図の種類</span>
@@ -426,14 +426,14 @@ footer a { color: inherit; }
         </div>
         <div class="hint" style="margin-top:6px" id="attrKindHint"></div>
         <div class="row" style="margin-top:12px">
-          <label class="chk"><input type="checkbox" id="attrRules" checked>異常判定ルールを使う（JIS Z 9020-2 の 8 ルール）</label>
+          <label class="chk"><input type="checkbox" id="attrRules" checked>異常判定ルールを使う（JIS Z 9020-2の8ルール）</label>
         </div>
         <div class="row" style="margin-top:16px"><button class="btn primary" id="runAttr" type="button">管理図を描く</button></div>
       </div>
     </div>
     <div class="box" id="attrResult" hidden>
       <h2>管理図の結果</h2>
-      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printAttr" type="button">印刷・PDF で保存</button><button class="btn small" id="dlAttr" type="button">結果を Excel で保存</button></div>
+      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printAttr" type="button">印刷・PDFで保存</button><button class="btn small" id="dlAttr" type="button">結果をExcelで保存</button></div>
       <dl class="kv" id="attrKv" style="margin-top:8px"></dl>
       <ul class="rulehits" id="attrHits"></ul>
       <ul class="log" id="attrLog"></ul>
@@ -442,19 +442,19 @@ footer a { color: inherit; }
 
     <div class="box" id="propSetup">
       <h2>不良率の比較</h2>
-      <div class="hint">群（変更前・変更後、仕入先ごと など）の検査数と不良数を入れると、不良率に差があるかを検定します。2 群なら z 検定と Fisher の正確検定、3 群以上なら χ² 検定です。データの読み込みは不要です。</div>
+      <div class="hint">群（変更前・変更後、仕入先ごと など）の検査数と不良数を入れると、不良率に差があるかを検定します。2群ならz検定とFisherの正確検定、3群以上ならχ² 検定です。データの読み込みは不要です。</div>
       <div class="tbl-wrap" style="margin-top:10px"><table class="spec prop"><thead><tr><th class="l">群の名前</th><th>検査数</th><th>不良数</th><th></th></tr></thead><tbody id="propBody"></tbody></table></div>
       <div class="row" style="margin-top:10px">
         <button class="btn small" id="propAdd" type="button">＋ 群を追加</button>
         <button class="btn small" id="propExample" type="button">例を入れる</button>
         <label class="field"><span class="lbl">有意水準</span><select id="propAlpha"><option value="0.10">0.10</option><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></label>
       </div>
-      <div class="hint" style="margin-top:6px">Excel で「群の名前・検査数・不良数」の範囲をコピーし、表の左上の欄に貼り付けることもできます。</div>
+      <div class="hint" style="margin-top:6px">Excelで「群の名前・検査数・不良数」の範囲をコピーし、表の左上の欄に貼り付けることもできます。</div>
       <div class="row" style="margin-top:16px"><button class="btn primary" id="runProp" type="button">比較する</button></div>
     </div>
     <div class="box" id="propResult" hidden>
       <h2>比較の結果</h2>
-      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printProp" type="button">印刷・PDF で保存</button><button class="btn small" id="dlProp" type="button">結果を Excel で保存</button></div>
+      <div class="row no-print" style="justify-content:flex-end"><button class="btn small" id="printProp" type="button">印刷・PDFで保存</button><button class="btn small" id="dlProp" type="button">結果をExcelで保存</button></div>
       <div class="tbl-wrap" id="propTable" style="margin-top:8px"></div>
       <div class="res-grid" id="propCards" style="margin-top:12px"></div>
       <ul class="log" id="propLog"></ul>
@@ -462,7 +462,7 @@ footer a { color: inherit; }
     </div>
   </section>
 
-  <!-- 解説（docs/explanation.md から tools/build.py で生成） -->
+  <!-- 解説（docs/explanation.mdからtools/build.pyで生成） -->
   <section id="tab-explain" data-panel="explain" hidden>
     <div class="box explain">
 <!--EXPLAIN-START-->
@@ -471,7 +471,7 @@ footer a { color: inherit; }
 以下の各項目を順に学ぶことで、工程の状態の把握と改善に役立つ知識を得ることができます。</p>
 <hr />
 <h3>1. 基本統計量と分布の特徴</h3>
-<h4>1.1 平均値と標準偏差</h4>
+<h4>1.1平均値と標準偏差</h4>
 <ul>
 <li><strong>平均値</strong>:<br />
     工程全体の中心的な値を示し、代表値として利用されます。</li>
@@ -479,7 +479,7 @@ footer a { color: inherit; }
     各データ点が平均値からどれだけ離れているかを数値化したもので、工程のばらつきを示します。<br />
     標準偏差が小さいほど、データは平均値周辺に集中しています。</li>
 </ul>
-<h4>1.2 尖度と歪度</h4>
+<h4>1.2尖度と歪度</h4>
 <ul>
 <li><strong>歪度 (Skewness)</strong>:<br />
     分布の左右対称性を評価する指標です。  <ul>
@@ -491,7 +491,7 @@ footer a { color: inherit; }
 <li><strong>尖度 (Kurtosis)</strong>:<br />
     分布のピークの鋭さや尾部の重さ（外れ値の出やすさ）を示します（余剰尖度の場合、正規分布は0が基準）。  <ul>
 <li>-0.5 ～ 0.5：正規分布に近い  </li>
-<li>0.5 ～ 1 または -0.5 ～ -1：やや尖った平らな分布  </li>
+<li>0.5 ～ 1または -0.5 ～ -1：やや尖った平らな分布  </li>
 <li>|尖度| &gt; 1：非常に重い尾や平らなピークで、外れ値の影響が大きい</li>
 </ul>
 </li>
@@ -499,7 +499,7 @@ footer a { color: inherit; }
 <p>これらの基本統計量は、まずヒストグラムやQQプロットを用いてデータの正規性を確認する際の基礎となります。</p>
 <hr />
 <h3>2. 各グラフの見方</h3>
-<h4>2.1 ヒストグラム</h4>
+<h4>2.1ヒストグラム</h4>
 <ul>
 <li><strong>目的</strong>:<br />
     データの度数分布や集中の傾向、外れ値の有無を直感的に把握するためのグラフです。</li>
@@ -515,7 +515,7 @@ footer a { color: inherit; }
 </ul>
 </li>
 <li><strong>工程能力図</strong>:<br />
-    本ツールのヒストグラムには、規格線（USL・LSL）と、平均と σ から描いた正規分布の曲線を2本重ねています。実線は全データの σ（Pp・Ppk に対応）、破線は群内の σ（Cp・Cpk に対応）です。2本の幅が大きく違うときは、サブグループ間の変動が大きいことを示します。</li>
+    本ツールのヒストグラムには、規格線（USL・LSL）と、平均とσから描いた正規分布の曲線を2本重ねています。実線は全データのσ（Pp・Ppkに対応）、破線は群内のσ（Cp・Cpkに対応）です。2本の幅が大きく違うときは、サブグループ間の変動が大きいことを示します。</li>
 </ul>
 <h4>2.2 QQプロット</h4>
 <ul>
@@ -526,7 +526,7 @@ footer a { color: inherit; }
 <li><strong>ポイント</strong>:<br />
     点が直線から大きく外れる場合、正規性に逸脱が見られる（外れ値の影響も示唆）。</li>
 </ul>
-<h4>2.3 確率密度分布（Density Plot）</h4>
+<h4>2.3確率密度分布（Density Plot）</h4>
 <ul>
 <li><strong>目的</strong>:<br />
     正規分布カーブと実際のデータ分布を比較し、平均値や±3σの位置に対するデータの分布状況を確認します。</li>
@@ -596,9 +596,9 @@ footer a { color: inherit; }
     管理限界との比較により、ばらつきが一定かどうかを評価します。<br />
     大きな変動があれば工程の改善点となります。</li>
 </ul>
-<h4>2.7 管理図の異常判定ルール</h4>
-<p>管理限界の内側にあっても、点の並び方に偏りがあれば工程に異常な原因がある可能性があります。本ツールは JIS Z 9020-2（ISO 7870-2）の 8 つのルールで X̄ 管理図・I 管理図を判定します。R・MR・s 管理図は管理限界外（ルール 1）だけを判定します。</p>
-<p>中心線からの距離を、打点する統計量の標準偏差 σ（管理限界までの 1/3）で測り、±1σ 以内を領域 C、1〜2σ を領域 B、2〜3σ を領域 A とします。</p>
+<h4>2.7管理図の異常判定ルール</h4>
+<p>管理限界の内側にあっても、点の並び方に偏りがあれば工程に異常な原因がある可能性があります。本ツールはJIS Z 9020-2（ISO 7870-2）の8つのルールでX̄ 管理図・I管理図を判定します。R・MR・s管理図は管理限界外（ルール1）だけを判定します。</p>
+<p>中心線からの距離を、打点する統計量の標準偏差σ（管理限界までの1/3）で測り、±1σ以内を領域C、1〜2σを領域B、2〜3σを領域Aとします。</p>
 <table>
 <thead>
 <tr>
@@ -609,53 +609,53 @@ footer a { color: inherit; }
 <tbody>
 <tr>
 <td>1</td>
-<td>1 点が管理限界の外（領域 A を超える）</td>
+<td>1点が管理限界の外（領域Aを超える）</td>
 </tr>
 <tr>
 <td>2</td>
-<td>連続 9 点が中心線の片側</td>
+<td>連続9点が中心線の片側</td>
 </tr>
 <tr>
 <td>3</td>
-<td>連続 6 点が増加または減少し続ける</td>
+<td>連続6点が増加または減少し続ける</td>
 </tr>
 <tr>
 <td>4</td>
-<td>連続 14 点が交互に増減する</td>
+<td>連続14点が交互に増減する</td>
 </tr>
 <tr>
 <td>5</td>
-<td>連続 3 点中 2 点が領域 A 以上（同じ側）</td>
+<td>連続3点中2点が領域A以上（同じ側）</td>
 </tr>
 <tr>
 <td>6</td>
-<td>連続 5 点中 4 点が領域 B 以上（同じ側）</td>
+<td>連続5点中4点が領域B以上（同じ側）</td>
 </tr>
 <tr>
 <td>7</td>
-<td>連続 15 点が領域 C（中心線 ±1σ 以内）</td>
+<td>連続15点が領域C（中心線 ±1σ以内）</td>
 </tr>
 <tr>
 <td>8</td>
-<td>連続 8 点が領域 C の外（中心線の両側）</td>
+<td>連続8点が領域Cの外（中心線の両側）</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>図では、ルール 1 に当たった点を赤、ほかのルールが成立した点（並びの最後の点）を橙で示し、当たったルールと点の範囲を一覧に出します</li>
+<li>図では、ルール1に当たった点を赤、ほかのルールが成立した点（並びの最後の点）を橙で示し、当たったルールと点の範囲を一覧に出します</li>
 <li>使うルールが多いほど、異常がないのに異常と判定する誤り（第1種の誤り）も増えます。当たったルールは、現場で原因を調べるきっかけとして扱ってください</li>
 </ul>
 <hr />
 <h3>3. 工程能力指数（Cp, Cpk, Pp, Ppk）と不良率の関係</h3>
-<h4>3.1 Cp・Cpk と Pp・Ppk の違い（使う σ が違う）</h4>
-<p>本ツールは AIAG SPC マニュアルの定義に合わせ、σ の求め方で4つの指数を区別します。</p>
+<h4>3.1 Cp・CpkとPp・Ppkの違い（使うσが違う）</h4>
+<p>本ツールはAIAG SPCマニュアルの定義に合わせ、σの求め方で4つの指数を区別します。</p>
 <ul>
-<li><strong>Cp / Cpk（工程能力指数）</strong>: <strong>群内変動 σ(群内)</strong> で計算します。サブグループ内の短期的なばらつきだけを見た「工程が本来持っている能力」です。  <ul>
-<li>サブグループサイズ 2 以上: σ(群内) = R̄ / d2（R̄ はサブグループのレンジの平均）  </li>
-<li>サブグループサイズ 1: σ(群内) = MR̄ / d2（隣り合う2点の移動範囲の平均、d2 = 1.128）  </li>
+<li><strong>Cp / Cpk（工程能力指数）</strong>: <strong>群内変動σ(群内)</strong> で計算します。サブグループ内の短期的なばらつきだけを見た「工程が本来持っている能力」です。  <ul>
+<li>サブグループサイズ2以上: σ(群内) = R̄ / d2（R̄ はサブグループのレンジの平均）  </li>
+<li>サブグループサイズ1: σ(群内) = MR̄ / d2（隣り合う2点の移動範囲の平均、d2 = 1.128）  </li>
 </ul>
 </li>
-<li><strong>Pp / Ppk（工程性能指数）</strong>: <strong>全データの標準偏差 s</strong> で計算します。サブグループ間の平均のずれやドリフトも含めた「実際に出てきた製品のばらつき」です。</li>
+<li><strong>Pp / Ppk（工程性能指数）</strong>: <strong>全データの標準偏差s</strong> で計算します。サブグループ間の平均のずれやドリフトも含めた「実際に出てきた製品のばらつき」です。</li>
 </ul>
 <pre><code>Cp  = (規格上限値 - 規格下限値) / (6 × σ(群内))
 Cpk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × σ(群内))
@@ -663,54 +663,54 @@ Pp  = (規格上限値 - 規格下限値) / (6 × s)
 Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
 </code></pre>
 <ul>
-<li><strong>片側規格</strong>: Cp・Pp は定義されないため「―」と表示し、Cpk・Ppk には規格がある側の値（CPU = (USL - 平均) / 3σ、CPL = (平均 - LSL) / 3σ）を表示します。</li>
-<li><strong>解釈</strong>: 工程が統計的管理状態にあれば Cpk ≈ Ppk になります。<strong>Cpk が Ppk より明らかに大きい場合は、サブグループ間の変動（平均のずれ・ドリフト）が大きく、工程が管理状態にない</strong>ことを示します。このとき Cpk は実際の製品品質を過大に見積もるので、管理図で原因を確認してください（Cpk / Ppk &gt; 1.33 のとき計算ログに注意を出します）。</li>
-<li>一般に Cpk（Ppk）が 1.33 以上であれば、工程は十分な能力を持つとされます。</li>
+<li><strong>片側規格</strong>: Cp・Ppは定義されないため「―」と表示し、Cpk・Ppkには規格がある側の値（CPU = (USL - 平均) / 3σ、CPL = (平均 - LSL) / 3σ）を表示します。</li>
+<li><strong>解釈</strong>: 工程が統計的管理状態にあればCpk ≈ Ppkになります。<strong>CpkがPpkより明らかに大きい場合は、サブグループ間の変動（平均のずれ・ドリフト）が大きく、工程が管理状態にない</strong>ことを示します。このときCpkは実際の製品品質を過大に見積もるので、管理図で原因を確認してください（Cpk / Ppk &gt; 1.33のとき計算ログに注意を出します）。</li>
+<li>一般にCpk（Ppk）が1.33以上であれば、工程は十分な能力を持つとされます。</li>
 </ul>
-<h4>3.2 計算上の前提と注意</h4>
+<h4>3.2計算上の前提と注意</h4>
 <ul>
-<li><strong>σ(群内) はデータが測定（生産）順に並んでいる前提</strong>で求めます。サブグループは先頭から順にサブグループサイズ個ずつ区切り、末尾の端数は σ(群内) の推定に使いません。並び順に意味がないデータ（ランダムに抜き取った寄せ集めなど）では Cp/Cpk は意味を持たないので、Pp/Ppk を参照してください。</li>
-<li>サブグループ数が少ないと σ(群内) の推定は不安定です。工程能力の調査では 25 組程度（個別値なら移動範囲 25 個程度）が目安で、これより少ないときは計算ログに注意を出します。</li>
-<li><strong>信頼区間は Pp/Ppk について表示します</strong>（Pp: カイ二乗分布、Ppk: Bissell の近似。いずれも s が n 個のデータから求めた標本標準偏差である前提）。R̄/d2 による σ(群内) は自由度が異なるため、Cp/Cpk の信頼区間は表示しません。</li>
-<li>「全体の標準偏差の計算方法」で「母集団標準偏差」を選ぶと、s の分母が n - 1 ではなく n になります（Pp/Ppk にのみ影響）。</li>
+<li><strong>σ(群内) はデータが測定（生産）順に並んでいる前提</strong>で求めます。サブグループは先頭から順にサブグループサイズ個ずつ区切り、末尾の端数はσ(群内) の推定に使いません。並び順に意味がないデータ（ランダムに抜き取った寄せ集めなど）ではCp/Cpkは意味を持たないので、Pp/Ppkを参照してください。</li>
+<li>サブグループ数が少ないとσ(群内) の推定は不安定です。工程能力の調査では25組程度（個別値なら移動範囲25個程度）が目安で、これより少ないときは計算ログに注意を出します。</li>
+<li><strong>信頼区間はPp/Ppkについて表示します</strong>（Pp: カイ二乗分布、Ppk: Bissellの近似。いずれもsがn個のデータから求めた標本標準偏差である前提）。R̄/d2によるσ(群内) は自由度が異なるため、Cp/Cpkの信頼区間は表示しません。</li>
+<li>「全体の標準偏差の計算方法」で「母集団標準偏差」を選ぶと、sの分母がn - 1ではなくnになります（Pp/Ppkにのみ影響）。</li>
 </ul>
-<h4>3.3 不良率の計算式</h4>
+<h4>3.3不良率の計算式</h4>
 <ul>
 <li>
-<p><strong>両側規格で Cp = Cpk = 1（平均が規格の中心）のとき</strong><br />
+<p><strong>両側規格でCp = Cpk = 1（平均が規格の中心）のとき</strong><br />
     正規分布を前提とすると、平均値から±3σ内に約99.73%のデータが含まれるため、不良率は 
     <code>不良率 = 2 × (1 - Φ(3)) ≈ 0.27%</code><br />
-    ※ Φ(3) は標準正規分布で 3 以下となる累積確率（≈ 0.99865）です。</p>
+    ※ Φ(3) は標準正規分布で3以下となる累積確率（≈ 0.99865）です。</p>
 </li>
 <li>
-<p><strong>片側規格で CPU（CPL）= 1 のとき</strong></p>
+<p><strong>片側規格でCPU（CPL）= 1のとき</strong></p>
 <ul>
-<li><strong>CPU の計算式（上側規格のみの例）</strong><br />
+<li><strong>CPUの計算式（上側規格のみの例）</strong><br />
 <code>CPU = (規格上限値 - 平均値) / (3 × σ)</code>  </li>
 <li>この場合、不良率は<br />
 <code>不良率 = 1 - Φ(3) ≈ 0.135%</code>  </li>
 </ul>
 </li>
 </ul>
-<h4>3.4 推定不良率（ppm）と実測の規格外れ</h4>
+<h4>3.4推定不良率（ppm）と実測の規格外れ</h4>
 <ul>
-<li><strong>推定不良率</strong>：データが正規分布に従うと仮定し、平均と σ から規格を外れる割合を百万分率（ppm）で求め、百分率（%）を併記します（1 % = 10,000 ppm、% は有効数字 3 桁）。<br />
+<li><strong>推定不良率</strong>：データが正規分布に従うと仮定し、平均とσから規格を外れる割合を百万分率（ppm）で求め、百分率（%）を併記します（1 % = 10,000 ppm、%は有効数字3桁）。<br />
 <code>上側 = 1 - Φ((USL - 平均) / σ)</code>、<code>下側 = Φ((LSL - 平均) / σ)</code><br />
-    σ に群内の σ を使った値（群内、Cpk に対応）と、全データの σ を使った値（全体、Ppk に対応）を並べて表示します。実際に出てくる不良に近いのは「全体」です</li>
-<li><strong>規格外れ（実測）</strong>：データの中で実際に規格を外れた個数と、その割合（ppm と %）です</li>
-<li>正規分布でないデータでは推定不良率が大きくずれます。Shapiro-Wilk 検定の p 値と QQ プロットで確認してください</li>
+    σに群内のσを使った値（群内、Cpkに対応）と、全データのσを使った値（全体、Ppkに対応）を並べて表示します。実際に出てくる不良に近いのは「全体」です</li>
+<li><strong>規格外れ（実測）</strong>：データの中で実際に規格を外れた個数と、その割合（ppmと%）です</li>
+<li>正規分布でないデータでは推定不良率が大きくずれます。Shapiro-Wilk検定のp値とQQプロットで確認してください</li>
 </ul>
-<h4>3.5 判定の基準</h4>
+<h4>3.5判定の基準</h4>
 <ul>
-<li>判定に使う値（Cpk、Ppk、Ppk の 95% 信頼区間の下限）と、◎・○・△ の基準値は解析オプションで変えられます。初期値は ◎ 1.67、○ 1.33、△ 1.00 です</li>
-<li>データ数が少ないと Cpk・Ppk の推定値はばらつきます。「Ppk の 95% 信頼区間の下限」で判定すると、データ数の少なさによる過大評価を避けられます（n = 30 で Ppk = 1.33 のとき、下限はおよそ 0.97）</li>
+<li>判定に使う値（Cpk、Ppk、Ppkの95%信頼区間の下限）と、◎・○・△ の基準値は解析オプションで変えられます。初期値は ◎ 1.67、○ 1.33、△ 1.00です</li>
+<li>データ数が少ないとCpk・Ppkの推定値はばらつきます。「Ppkの95%信頼区間の下限」で判定すると、データ数の少なさによる過大評価を避けられます（n = 30でPpk = 1.33のとき、下限はおよそ0.97）</li>
 </ul>
-<h4>3.6 必要なデータ数の目安</h4>
+<h4>3.6必要なデータ数の目安</h4>
 <ul>
-<li>Ppk の推定値は、データ数が少ないほどばらつきます。そこで「Ppk の 95% 信頼区間（Bissell の近似）の下限が基準値以上になるには、何個のデータが要るか」を逆算して表示します</li>
-<li>結果の画面では、今の Ppk がこのまま続くと仮定して、「○ 良好」の基準値（初期値 1.33）に必要な数を出します。今の Ppk が基準値以下なら、データを増やしても下限は届きません</li>
-<li>測定を始める前は「必要なデータ数の目安」の欄で、見込みの Ppk と示したい値から計画できます。95% 信頼区間で 1.33 を示す場合、見込みの Ppk が 1.67 なら 51 個、2.00 なら 20 個、1.50 なら 166 個が目安です</li>
-<li>群内の σ（R̄ / d2）を使う Cp・Cpk は自由度の扱いが異なるため、この計算は Ppk についてのものです</li>
+<li>Ppkの推定値は、データ数が少ないほどばらつきます。そこで「Ppkの95%信頼区間（Bissellの近似）の下限が基準値以上になるには、何個のデータが要るか」を逆算して表示します</li>
+<li>結果の画面では、今のPpkがこのまま続くと仮定して、「○ 良好」の基準値（初期値1.33）に必要な数を出します。今のPpkが基準値以下なら、データを増やしても下限は届きません</li>
+<li>測定を始める前は「必要なデータ数の目安」の欄で、見込みのPpkと示したい値から計画できます。95%信頼区間で1.33を示す場合、見込みのPpkが1.67なら51個、2.00なら20個、1.50なら166個が目安です</li>
+<li>群内のσ（R̄ / d2）を使うCp・Cpkは自由度の扱いが異なるため、この計算はPpkについてのものです</li>
 </ul>
 <hr />
 <h3>4. サブグループサイズとA2係数の関係</h3>
@@ -720,7 +720,7 @@ Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
     管理限界は次の式で計算されます。
     <code>管理限界 = 全体平均 ± (A2 × サブグループ平均レンジ)</code>  </li>
 </ul>
-<h4>4.2 サブグループサイズとA2係数の関係</h4>
+<h4>4.2サブグループサイズとA2係数の関係</h4>
 <table>
 <thead>
 <tr>
@@ -767,7 +767,7 @@ Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
 </tr>
 </tbody>
 </table>
-<h4>4.3 解説</h4>
+<h4>4.3解説</h4>
 <ul>
 <li><strong>小さいサブグループ（例：サイズ2～3）</strong>:<br />
     各グループ内のばらつきが大きく反映されるため、A2係数が高くなり、管理限界は広く設定されます。</li>
@@ -776,11 +776,11 @@ Ppk = min(規格上限値 - 平均値, 平均値 - 規格下限値) / (3 × s)
 <li><strong>実務上の注意</strong>:<br />
     適切なサブグループサイズの選択は、偽陽性の警報を防ぎ、実際の工程異常を正確に捉えるうえで重要です。</li>
 </ul>
-<h4>4.4 列の値でサブグループを分ける</h4>
+<h4>4.4列の値でサブグループを分ける</h4>
 <ul>
 <li>ロット番号や日付の列を「サブグループの分け方」で選ぶと、その値が同じデータを1つのサブグループにします（最初に出てきた順に並べます）</li>
-<li>サブグループのサイズが揃っていないときは、σ(群内) を各サブグループの R / d2(n) の平均で求め、管理限界はサブグループごとのサイズで計算します（図では階段状になります）。サイズが揃っていれば通常の R̄ / d2、A2・D3・D4・B3・B4 による計算と同じ結果です</li>
-<li>係数表のあるサイズ 2〜10 のサブグループだけを使います。サイズ 1 や 11 以上のサブグループは σ(群内) の推定と管理図から除き、計算ログに件数を出します（Pp・Ppk には含めます）</li>
+<li>サブグループのサイズが揃っていないときは、σ(群内) を各サブグループのR / d2(n) の平均で求め、管理限界はサブグループごとのサイズで計算します（図では階段状になります）。サイズが揃っていれば通常のR̄ / d2、A2・D3・D4・B3・B4による計算と同じ結果です</li>
+<li>係数表のあるサイズ2〜10のサブグループだけを使います。サイズ1や11以上のサブグループはσ(群内) の推定と管理図から除き、計算ログに件数を出します（Pp・Ppkには含めます）</li>
 </ul>
 <hr />
 <h3>5. t検定/F検定</h3>
@@ -830,14 +830,14 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
 <p>これらの検定結果をもとに、工程改善の必要性や適正な仕様管理の基準を検討することが、品質管理の現場では非常に重要となります。</p>
 <hr />
 <h3>6. 相関係数/決定係数</h3>
-<h4>6.1 相関係数 (Correlation Coefficient)</h4>
+<h4>6.1相関係数 (Correlation Coefficient)</h4>
 <pre><code>- 2つの数値変数間の関係の強さと方向（正の関係か負の関係か）を数値で表現します。  
 - **値の範囲：** -1 ～ +1  
     - **+1に近い：** 片方が増加するにつれてもう片方も増加する（正の相関）  
     - **-1に近い：** 片方の増加に伴いもう片方が減少する（負の相関）  
     - **0に近い：** 明確な直線的関係がなく、ほとんど関係が見られない
 </code></pre>
-<h4>6.2 決定係数 (Coefficient of Determination)</h4>
+<h4>6.2決定係数 (Coefficient of Determination)</h4>
 <pre><code>- 回帰分析において、どれだけのデータのばらつき（変動）が説明変数によって説明できるかを示します。  
 - **通常は：** 相関係数の二乗（r²）として計算  
 - **値の範囲：** 0 ～ 1  
@@ -846,7 +846,7 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
 </code></pre>
 <hr />
 <h3>7. 計数値の管理図（p・np・u・c）</h3>
-<p>「計数値」タブでは、不良数や欠点数のように<strong>数えて得るデータ</strong>の管理図を描きます。データは 1 行 1 群（ロット・日など）で、不良数（欠点数）と検査数（単位数）を並べます。</p>
+<p>「計数値」タブでは、不良数や欠点数のように<strong>数えて得るデータ</strong>の管理図を描きます。データは1行1群（ロット・日など）で、不良数（欠点数）と検査数（単位数）を並べます。</p>
 <table>
 <thead>
 <tr>
@@ -859,7 +859,7 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
 <tbody>
 <tr>
 <td>p（不良率）</td>
-<td>pᵢ = 不良数 ÷ 検査数 nᵢ</td>
+<td>pᵢ = 不良数 ÷ 検査数nᵢ</td>
 <td>p̄ = Σ不良数 ÷ Σnᵢ</td>
 <td>p̄ ± 3√(p̄(1 − p̄) / nᵢ)</td>
 </tr>
@@ -871,7 +871,7 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
 </tr>
 <tr>
 <td>u（単位あたりの欠点数）</td>
-<td>uᵢ = 欠点数 ÷ 単位数 nᵢ</td>
+<td>uᵢ = 欠点数 ÷ 単位数nᵢ</td>
 <td>ū = Σ欠点数 ÷ Σnᵢ</td>
 <td>ū ± 3√(ū / nᵢ)</td>
 </tr>
@@ -884,24 +884,24 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
 </tbody>
 </table>
 <ul>
-<li>不良の数は<strong>二項分布</strong>、欠点の数は<strong>ポアソン分布</strong>に従うと考え、その標準偏差の 3 倍で管理限界を引きます</li>
-<li>p・u 管理図は検査数（単位数）が群ごとに違ってもよく、管理限界は群ごとに変わります（検査数が少ない群ほど広い）。np・c 管理図は検査数（調べる大きさ）が一定のときに使います</li>
-<li>下側管理限界が負になるときは 0 にします。その群では、不良の減少（改善）を管理限界外として検出できません</li>
-<li>異常判定ルールは計量値の管理図と同じ JIS Z 9020-2 の 8 ルールで、領域は打ち切る前の σ で決めます。不良数の平均（n·p̄、欠点数の平均）が 5 未満だと分布が左右非対称になり、正規分布を前提にしたルールが合いにくくなるので、画面に注意を出します</li>
+<li>不良の数は<strong>二項分布</strong>、欠点の数は<strong>ポアソン分布</strong>に従うと考え、その標準偏差の3倍で管理限界を引きます</li>
+<li>p・u管理図は検査数（単位数）が群ごとに違ってもよく、管理限界は群ごとに変わります（検査数が少ない群ほど広い）。np・c管理図は検査数（調べる大きさ）が一定のときに使います</li>
+<li>下側管理限界が負になるときは0にします。その群では、不良の減少（改善）を管理限界外として検出できません</li>
+<li>異常判定ルールは計量値の管理図と同じJIS Z 9020-2の8ルールで、領域は打ち切る前のσで決めます。不良数の平均（n·p̄、欠点数の平均）が5未満だと分布が左右非対称になり、正規分布を前提にしたルールが合いにくくなるので、画面に注意を出します</li>
 </ul>
 <h3>8. 不良率の比較（比率の検定）</h3>
 <p>群ごとの検査数と不良数から、不良率に差があるかを検定します。変更前後の比較や、仕入先・ラインごとの比較に使います。</p>
-<h4>8.1 各群の不良率の信頼区間</h4>
-<p><strong>Clopper-Pearson 法</strong>（正確法）で求めます。二項分布をそのまま使うので、不良が 0 個のときや検査数が少ないときにも信頼度を下回りません。x 個不良・検査数 n、信頼度 1 − α のとき、下限は B⁻¹(α/2; x, n − x + 1)、上限は B⁻¹(1 − α/2; x + 1, n − x) です（B⁻¹ はベータ分布の分位点）。</p>
-<h4>8.2 2 群の比較</h4>
+<h4>8.1各群の不良率の信頼区間</h4>
+<p><strong>Clopper-Pearson法</strong>（正確法）で求めます。二項分布をそのまま使うので、不良が0個のときや検査数が少ないときにも信頼度を下回りません。x個不良・検査数n、信頼度1 − αのとき、下限はB⁻¹(α/2; x, n − x + 1)、上限はB⁻¹(1 − α/2; x + 1, n − x) です（B⁻¹ はベータ分布の分位点）。</p>
+<h4>8.2 2群の比較</h4>
 <ul>
-<li><strong>z 検定（正規近似）</strong>：2 群を合わせた不良率 p̄ = (x₁ + x₂) / (n₁ + n₂) を使い、z = (p₁ − p₂) / √(p̄(1 − p̄)(1/n₁ + 1/n₂)) を標準正規分布で評価します（両側）。QC 検定などで「母不良率の差の検定」として扱う方法です。z² は 2×2 表の χ² 検定（連続修正なし）の χ² 値と一致します</li>
-<li><strong>Fisher の正確検定</strong>：近似を使わず、行と列の合計を固定したときの超幾何分布から p 値を求めます（両側。観測した表以下の確率の表をすべて足す）</li>
-<li><strong>判定に使う検定</strong>：2×2 表の期待度数がすべて 5 以上なら z 検定、5 未満の欄があれば Fisher の正確検定で判定します。もう一方は参考として表示します</li>
-<li><strong>差の信頼区間</strong>：Newcombe の方法（各群の Wilson のスコア区間を組み合わせる方法）で求めます。単純な正規近似（p₁ − p₂ ± z·SE）より、不良率が 0 に近いときや検査数が少ないときの精度が良い方法です</li>
+<li><strong>z検定（正規近似）</strong>：2群を合わせた不良率p̄ = (x₁ + x₂) / (n₁ + n₂) を使い、z = (p₁ − p₂) / √(p̄(1 − p̄)(1/n₁ + 1/n₂)) を標準正規分布で評価します（両側）。QC検定などで「母不良率の差の検定」として扱う方法です。z² は2×2表のχ² 検定（連続修正なし）のχ² 値と一致します</li>
+<li><strong>Fisherの正確検定</strong>：近似を使わず、行と列の合計を固定したときの超幾何分布からp値を求めます（両側。観測した表以下の確率の表をすべて足す）</li>
+<li><strong>判定に使う検定</strong>：2×2表の期待度数がすべて5以上ならz検定、5未満の欄があればFisherの正確検定で判定します。もう一方は参考として表示します</li>
+<li><strong>差の信頼区間</strong>：Newcombeの方法（各群のWilsonのスコア区間を組み合わせる方法）で求めます。単純な正規近似（p₁ − p₂ ± z·SE）より、不良率が0に近いときや検査数が少ないときの精度が良い方法です</li>
 </ul>
-<h4>8.3 3 群以上の比較</h4>
-<p>2 × k の分割表で、不良率がすべての群で等しいかを <strong>χ² 検定</strong>（連続修正なし、自由度 k − 1）で調べます。有意になっても分かるのは「どこかの群に差がある」ことまでです。どの群に差があるかを 2 群ずつ比べるときは、比べる回数が増えるほど偶然の差を差と判定しやすくなる点に注意してください。期待度数が 5 未満の欄があると近似が悪くなるので、画面に注意を出します。</p>
+<h4>8.3 3群以上の比較</h4>
+<p>2 × kの分割表で、不良率がすべての群で等しいかを <strong>χ² 検定</strong>（連続修正なし、自由度k − 1）で調べます。有意になっても分かるのは「どこかの群に差がある」ことまでです。どの群に差があるかを2群ずつ比べるときは、比べる回数が増えるほど偶然の差を差と判定しやすくなる点に注意してください。期待度数が5未満の欄があると近似が悪くなるので、画面に注意を出します。</p>
 <h3>9. 測定データの異常値（アウトライア）の検出と処理</h3>
 <p>測定データにおける異常値は、工程上の偶発的な誤差や測定器の不具合、または実際のプロセス変化を反映する場合があります。以下のポイントを考慮して処理してください。</p>
 <ul>
@@ -928,7 +928,7 @@ F検定は、2群の分散の比率をF分布と比較することで、帰無�
 <ul>
 <li>
 <p><strong>正規性の確認</strong><br />
-Cp/Cpk/Pp/Ppk の計算はデータが正規分布である前提に依存するため、ヒストグラム、QQプロット、確率密度分布を用いて正規性を十分に確認してください。</p>
+Cp/Cpk/Pp/Ppkの計算はデータが正規分布である前提に依存するため、ヒストグラム、QQプロット、確率密度分布を用いて正規性を十分に確認してください。</p>
 </li>
 <li>
 <p><strong>サンプルサイズの確保</strong><br />
